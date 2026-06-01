@@ -496,7 +496,7 @@ function exportA4PDF() {
     element.style.padding = "15mm"; // Restore safety borders
     
     const opt = {
-        margin:       0, // Zero out html2pdf margin to prevent shifting double margins
+        margin:       [10, 5, 10, 5],// Zero out html2pdf margin to prevent shifting double margins
         filename:     `Invoice_${filenameString}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
