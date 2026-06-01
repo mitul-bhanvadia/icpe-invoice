@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICPE Invoice Engine Pro v2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --primary: #0f172a; --accent: #2563eb; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; margin: 0; padding: 15px; color: #334155; }
+        
+        /* Interactive Input Form Panel */
+        .no-print { max-width: 850px; margin: 0 auto 20px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #64748b; }
+        select, input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 16px; } /* Increased padding and font size for mobile tap targets */
+        
+        /* Desktop Item Input Table */
+        .ui-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .ui-table th { background: #f8fafc; text-align: left; padding: 10px; font-size: 13px; color: #64748b; }
+        .ui-table td { padding: 8px 4px; }
+        
+        .btn { background: var(--accent); color: white; border: none; padding: 12px 18px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-danger { background: #ef4444; width: 100%; }
+        .btn-success { background: #10b981; width: 100%; padding: 14px; font-size: 16px; margin-top: 15px; }
+        
+        /* --- Mobile Responsive Form Factor Overhaul --- */
+        @media screen and (max-width: 768px) {
+            /* Hide the traditional desktop table headers on mobile */
+            .ui-table thead { display: none; }
+            
+            /* Turn every item row into a standalone card container */
+            .ui-table tr { 
+                display: block; 
+                background: #f8fafc; 
+                border: 1px solid #e2e8f0; 
+                border-radius: 10px; 
+                padding: 12px; 
+                margin-bottom: 15px; 
+                position: relative;
+            }
+            
+            /* Make cells wrap smoothly and layout stacked vertically */
+            .ui-table td { 
+                display: block; 
+                width: 100% !important; 
+                box-sizing: border-box;
+                padding: 6px 0;
+            }
+
+            /* Add visual labels above inputs on mobile so you know what is what */
+            .ui-table td:nth-child(1)::before { content: "Component Description"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
+            .ui-table td:nth-child(2)::before { content: "Quantity (Nos)"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
+            .ui-table td:nth-child(3)::before { content: "Unit Price (INR)"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
+            .ui-table td:nth-child(4)::before { content: "GST %"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
+            .ui-table td:nth-child(5)::before { content: "TDS %"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
+        }
+
+        /* --- Strict Fixed A4 Output Constraints (Prevents Right Side Cut-Offs) --- */
+        #print-area { 
+            width: 190mm; 
+            background: white; 
+            margin: 0 auto; 
+            box-sizing: border-box; 
+            font-size: 12px; 
+            color: #000; 
+            line-height: 1.4; 
+        }
+        .inv-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; }
+        .company-title { font-size: 20px; font-weight: bold; margin: 0; }
+        .inv-type-badge { border: 1px solid #000; padding: 4px 10px; font-weight: bold; font-size: 11px; text-transform: uppercase; align-self: flex-start; }
+        
+        .meta-table, .item-table { width: 100%; border-collapse: collapse; margin-top: 12px; table-layout: fixed; }
+        .meta-table td { border: 1px solid #000; padding: 6px; vertical-align: top; width: 50%; word-break: break-all; }
+        
+        .item-table th, .item-table td { border: 1px solid #000; padding: 6px; word-wrap: break-word; }
+        .item-table th { background: #f1f5f9; text-align: left; }
+        .text-right { text-align: right; }
+        
+        .totals-section { display: flex; justify-content: space-between; margin-top: 15px; page-break-inside: avoid; }
+        .bank-details { width: 50%; font-size: 11px; border: 1px dashed #000; padding: 8px; }
+        .summary-box { width: 46%; }
+        .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
+        .grand-total { font-size: 14px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin-top: 4px; }
+        
+        .sign-block { margin-top: 35px; text-align: right; font-weight: bold; page-break-inside: avoid; }
+        
+        @media screen {
+            #print-area { box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; padding: 15mm; margin-bottom: 50px; }
+        }
+        
+        /* Desktop/Mobile handling for printable invoice template wrapper preview visibility */
+        @media screen and (max-width: 768px) {
+            #print-area { width: 100%; padding: 10px; font-size: 11px; overflow-x: auto; }
+            .totals-section { flex-direction: column; }
+            .bank-details, .summary-box { width: 100%; margin-bottom: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print">
+    <h3>⚡ ICPE Invoice Engine & Calculator</h3>
+    
+    <div class="grid">
+        <div>
+            <label>1. Client Profile</label>
+            <select id="uiClient" onchange="mapClient()"><option>Parsing live profiles...</option></select>
+        </div>
+        <div>
+            <label>Document Badge</label>
+            <select id="uiCopy" onchange="render()">
+                <option value="Original Copy">Original Copy</option>
+                <option value="Duplicate Copy">Duplicate Copy</option>
+                <option value="Triplicate Copy">Triplicate Copy</option>
+            </select>
+        </div>
+        <div>
+            <label>Invoice Number</label>
+            <input type="text" id="uiInvNo" value="ICPE/003" oninput="render()">
+        </div>
+        <div>
+            <label>Challan / Job Card No.</label>
+            <input type="text" id="uiJobCard" value="024" oninput="render()">
+        </div>
+    </div>
+
+    <hr style="border:0; border-top:1px solid #e2e8f0; margin:15px 0;">
+    <label style="font-size:15px; color:var(--primary); margin-bottom:10px;">Line Items (Dynamic Work Orders)</label>
+    
+    <table class="ui-table" id="uiItemTable">
+        <thead>
+            <tr>
+                <th style="width:40%">Component / Jobwork Description</th>
+                <th style="width:15%">Qty</th>
+                <th style="width:15%">Unit Price</th>
+                <th style="width:12%">GST %</th>
+                <th style="width:10%">TDS %</th>
+                <th style="width:8%">Action</th>
+            </tr>
+        </thead>
+        <tbody id="itemRows">
+            </tbody>
+    </table>
+    
+    <button class="btn" onclick="addNewRow()">＋ Add Item Line</button>
+    <button class="btn btn-success" onclick="exportA4PDF()">💾 Save Perfectly Aligned A4 PDF</button>
+</div>
+
+<div id="print-area">
+    <div class="inv-header">
+        <div>
+            <div class="company-title">Inficharge Power Electronics</div>
+            <div style="font-size:11px; margin-top:2px; color:#334155;">
+                FF-06, Kishan Galaxy, Near Broadway Hub, Bhayli Road, Vadodara, Gujarat, 391410<br>
+                Mobile: +91 7984337254 | Email: Inficharge.power@gmail.com<br>
+                <strong>GSTIN: 24BBDPB1858G1Z2</strong>
+            </div>
+        </div>
+        <div class="inv-type-badge" id="lblCopy">Original Copy</div>
+    </div>
+
+    <table class="meta-table">
+        <tr>
+            <td>
+                <strong>To (Client Details):</strong><br>
+                <span id="lblClientName" style="font-weight:bold;">-</span><br>
+                Address: <span id="lblClientAddr">-</span><br>
+                Phone: <span id="lblClientPhone">-</span><br>
+                <strong>GSTIN: <span id="lblClientGst">-</span></strong>
+            </td>
+            <td>
+                <strong>Invoice Metadata:</strong><br>
+                Invoice No: <span id="lblInvNo" style="font-weight:bold;">-</span><br>
+                Date: <span id="lblDate">-</span><br>
+                Challan/Job Card Reference: <span id="lblJobCard">-</span>
+            </td>
+        </tr>
+    </table>
+
+    <table class="item-table">
+        <thead>
+            <tr>
+                <th style="width: 50%;">Description of Jobwork / Details</th>
+                <th style="width: 12%;">HSN Code</th>
+                <th style="width: 10%;" class="text-right">Qty</th>
+                <th style="width: 13%;" class="text-right">Unit Price</th>
+                <th style="width: 15%;" class="text-right">Total (INR)</th>
+            </tr>
+        </thead>
+        <tbody id="printItemRows">
+            </tbody>
+    </table>
+
+    <div class="totals-section">
+        <div class="bank-details">
+            <strong>Remittance / Bank Details:</strong><br>
+            A/C Name: INFICHARGE POWER ELECTRONICS<br>
+            Bank: BANK OF BARODA<br>
+            Branch: Bhaili, Vadodara<br>
+            A/C No: 02060200000264<br>
+            IFSC Code: BARB0BHAILI (5th Character is Zero)
+        </div>
+        <div class="summary-box">
+            <div class="summary-row"><span>Subtotal:</span><span id="valSub">0.00</span></div>
+            <div class="summary-row"><span id="lblCgst">CGST:</span><span id="valCgst">0.00</span></div>
+            <div class="summary-row"><span id="lblSgst">SGST:</span><span id="valSgst">0.00</span></div>
+            <div class="grand-total">
+                <div class="summary-row"><span>Invoice Total:</span><span id="valTotal">0.00</span></div>
+            </div>
+            <div class="summary-row" style="color: #b91c1c; font-weight: 600; margin-top:5px;">
+                <span>Less: TDS u/s 194C:</span><span id="valTds">0.00</span>
+            </div>
+            <div class="summary-row" style="font-weight:bold; border-top:1px dashed #000; padding-top:4px; font-size:13px;">
+                <span>Net Payable:</span><span id="valPayable">0.00</span>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 15px; font-style: italic; font-size: 11px;">
+        <strong>Amount in Words:</strong> <span id="valWords">-</span>
+    </div>
+
+    <div class="sign-block">
+        For Inficharge Power Electronics<br><br><br><br>
+        (Authorized Signatory)
+    </div>
+</div>
+
+<script>
+// --- CORRECTED GOOGLE API DATA LINK CONFIGURATION ---
+const MASTER_SHEET_ID = "1CGpO35mnhNtv4QjeVojEf-3s78gYllV-dZb6HnHSnS4";
+
+// Using explicit custom handlers to capture the visual query stream safely bypassing CORS restrictions
+const CLIENTS_CSV_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=0&tqx=responseHandler:handleClientsResponse`;
+const COMPONENTS_CSV_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=657996699&tqx=responseHandler:handleComponentsResponse`;
+
+let clientsDB = [];
+let componentsDB = [];
+
+// Clean offline backup lists
+const localClientsFallback = [{id:"zeck", CompanyName:"ZECK PRIVATE LIMITED", Address:"3rd Floor, 13 Landmark, Gotri Road, Sevasi, Vadodara - 391101", Phone:"+91 - 75749 88882", GSTIN:"24AAACZ9258L1ZQ"}];
+const localItemsFallback = [
+    {id:"rgb8_216", Description:"RGB_8_T_4M_v.26(216P) - SMT Jobwork", HSN:"998898", BasePrice:25.92, DefaultGST:18, DefaultTDS:2},
+    {id:"ztcw_v8", Description:"ZTCW_TCH4_V8 – SMD Job work", HSN:"998898", BasePrice:15.24, DefaultGST:12, DefaultTDS:2}
+];
+
+let clientsLoaded = false;
+let componentsLoaded = false;
+
+function loadExternalData() {
+    // 1. Script injection for Clients
+    const scriptClient = document.createElement('script');
+    scriptClient.src = CLIENTS_CSV_URL;
+    document.body.appendChild(scriptClient);
+
+    // 2. Script injection for Components
+    const scriptComp = document.createElement('script');
+    scriptComp.src = COMPONENTS_CSV_URL;
+    document.body.appendChild(scriptComp);
+    
+    // Safety check timeout: If Google takes over 4 seconds, drop back to local profiles
+    setTimeout(() => {
+        if (!clientsLoaded || !componentsLoaded) {
+            console.log("Network timeout. Deploying default backup array states.");
+            if (!clientsLoaded) { clientsDB = localClientsFallback; clientsLoaded = true; }
+            if (!componentsLoaded) { componentsDB = localItemsFallback; componentsLoaded = true; }
+            initApp();
+        }
+    }, 4000);
+}
+
+// Global Response Handler for Clients
+window.handleClientsResponse = function(response) {
+    try {
+        if (response && response.table) {
+            clientsDB = parseGoogleJson(response.table);
+            clientsDB.forEach((c, idx) => { if(!c.id) c.id = c.CompanyName ? c.CompanyName.toLowerCase().replace(/\s+/g, '') : 'client_' + idx; });
+            clientsLoaded = true;
+            checkLoadingComplete();
+        }
+    } catch(e) { console.error("Error structural handling client json rows:", e); }
+};
+
+// Global Response Handler for Components
+window.handleComponentsResponse = function(response) {
+    try {
+        if (response && response.table) {
+            componentsDB = parseGoogleJson(response.table);
+            componentsDB.forEach((item, idx) => { if(!item.id) item.id = item.Description ? item.Description.toLowerCase().replace(/\s+/g, '') : 'item_' + idx; });
+            componentsLoaded = true;
+            checkLoadingComplete();
+        }
+    } catch(e) { console.error("Error structural handling component json rows:", e); }
+};
+
+function parseGoogleJson(table) {
+    // Build a map of column labels, but fallback to their letter positions if labels are blank
+    const headers = table.cols.map((col, idx) => {
+        if (col.label && col.label.trim() !== "") {
+            return col.label.trim();
+        }
+        // Fallback positioning mapping mapping arrays safely
+        const alphabet = ['A','B','C','D','E','F','G','H','I','J','K'];
+        return alphabet[idx] || 'Col' + idx;
+    });
+
+    return table.rows.map(row => {
+        let obj = {};
+        row.c.forEach((cell, i) => {
+            const headerName = headers[i];
+            if (headerName) {
+                // Read the cell value, fallback to empty string if null
+                obj[headerName] = cell && cell.v !== null ? cell.v.toString().trim() : '';
+            }
+        });
+        
+        // POSITIONAL FALLBACKS: If names aren't matched by exact headers, map them by standard column position
+        if (!obj.id && row.c[0]) obj.id = row.c[0].v ? row.c[0].v.toString().trim() : '';
+        
+        // Clients Positional Mapping (Col A: id, Col B: CompanyName, Col C: Address, Col D: Phone, Col E: GSTIN)
+        if (row.c[1] && !obj.CompanyName) obj.CompanyName = row.c[1].v ? row.c[1].v.toString().trim() : '';
+        if (row.c[2] && !obj.Address) obj.Address = row.c[2].v ? row.c[2].v.toString().trim() : '';
+        if (row.c[3] && !obj.Phone) obj.Phone = row.c[3].v ? row.c[3].v.toString().trim() : '';
+        if (row.c[4] && !obj.GSTIN) obj.GSTIN = row.c[4].v ? row.c[4].v.toString().trim() : '';
+
+        // Components Positional Mapping (Col A: id, Col B: Description, Col C: HSN, Col D: BasePrice, Col E: DefaultGST, Col F: DefaultTDS)
+        if (row.c[1] && !obj.Description) obj.Description = row.c[1].v ? row.c[1].v.toString().trim() : '';
+        if (row.c[2] && !obj.HSN) obj.HSN = row.c[2].v ? row.c[2].v.toString().trim() : '';
+        if (row.c[3] && !obj.BasePrice) obj.BasePrice = row.c[3].v ? row.c[3].v.toString().trim() : '';
+        if (row.c[4] && !obj.DefaultGST) obj.DefaultGST = row.c[4].v ? row.c[4].v.toString().trim() : '';
+        if (row.c[5] && !obj.DefaultTDS) obj.DefaultTDS = row.c[5].v ? row.c[5].v.toString().trim() : '';
+
+        return obj;
+    });
+}
+
+function checkLoadingComplete() {
+    if (clientsLoaded && componentsLoaded) {
+        initApp();
+    }
+}
+
+function initApp() {
+    const cSelect = document.getElementById('uiClient');
+    cSelect.innerHTML = "";
+    
+    if (clientsDB.length === 0) {
+        cSelect.add(new Option("No profiles found inside database", ""));
+    } else {
+        clientsDB.forEach(c => { 
+            // Look for any variation of name fields, fallback to its raw ID if all headers fail
+            let name = c.CompanyName || c.Company || c.name || c.B || c.id || "Unknown Client";
+            cSelect.add(new Option(name, c.id)); 
+        });
+    }
+    
+    document.getElementById('lblDate').innerText = new Date().toISOString().slice(0,10);
+    mapClient();
+    addNewRow();
+}
+
+function mapClient() {
+    const cid = document.getElementById('uiClient').value;
+    const client = clientsDB.find(c => c.id === cid);
+    if (client) {
+        document.getElementById('lblClientName').innerText = client.CompanyName || client.Company || client.name || client.B || '-';
+        document.getElementById('lblClientAddr').innerText = client.Address || client.address || client.C || '-';
+        document.getElementById('lblClientPhone').innerText = client.Phone || client.phone || client["Phone 1 "] || client.D || '-';
+        document.getElementById('lblClientGst').innerText = client.GSTIN || client.gstin || client["GST No"] || client.E || '-';
+    }
+    render();
+}
+
+function addNewRow() {
+    const tbody = document.getElementById('itemRows');
+    const rowId = Date.now();
+    const tr = document.createElement('tr');
+    tr.id = `row-${rowId}`;
+    
+    let options = componentsDB.map(i => `<option value="${i.id}">${i.Description || i.Details || i.name}</option>`).join('');
+    
+    tr.innerHTML = `
+        <td><select class="row-item" onchange="mapRowItem('${rowId}')">${options}</select></td>
+        <td><input type="number" class="row-qty" value="1" oninput="render()"></td>
+        <td><input type="number" step="0.01" class="row-price" value="0.00" oninput="render()"></td>
+        <td><input type="number" class="row-gst" value="18" oninput="render()"></td>
+        <td><input type="number" step="0.1" class="row-tds" value="2.0" oninput="render()"></td>
+        <td><button class="btn btn-danger" onclick="deleteRow('${rowId}')">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+    mapRowItem(rowId);
+}
+
+function deleteRow(id) {
+    const rows = document.querySelectorAll('#itemRows tr');
+    if(rows.length > 1) {
+        document.getElementById(`row-${id}`).remove();
+    } else {
+        alert("Invoice requires at least 1 transactional line item entry.");
+    }
+    render();
+}
+
+function mapRowItem(rowId) {
+    const row = document.getElementById(`row-${rowId}`);
+    const compId = row.querySelector('.row-item').value;
+    const comp = componentsDB.find(c => c.id === compId);
+    if(comp) {
+        row.querySelector('.row-price').value = comp.BasePrice || comp["Unit Price"] || comp.basePrice || 0;
+        row.querySelector('.row-gst').value = comp.DefaultGST || comp.defaultGst || 18;
+        row.querySelector('.row-tds').value = comp.DefaultTDS || comp.defaultTds || 2;
+    }
+    render();
+}
+
+function render() {
+    document.getElementById('lblCopy').innerText = document.getElementById('uiCopy').value;
+    document.getElementById('lblInvNo').innerText = document.getElementById('uiInvNo').value;
+    document.getElementById('lblJobCard').innerText = document.getElementById('uiJobCard').value;
+
+    const rows = document.querySelectorAll('#itemRows tr');
+    const printTbody = document.getElementById('printItemRows');
+    printTbody.innerHTML = "";
+
+    let runningSubtotal = 0;
+    let runningCgst = 0;
+    let runningSgst = 0;
+    let runningTds = 0;
+
+    rows.forEach(row => {
+        const compId = row.querySelector('.row-item').value;
+        const comp = componentsDB.find(c => c.id === compId);
+        const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.row-price').value) || 0;
+        const gstTotalRate = parseFloat(row.querySelector('.row-gst').value) || 0;
+        const tdsRate = parseFloat(row.querySelector('.row-tds').value) || 0;
+
+        const lineTotal = qty * price;
+        runningSubtotal += lineTotal;
+
+        const lineGstHalf = gstTotalRate / 2;
+        runningCgst += lineTotal * (lineGstHalf / 100);
+        runningSgst += lineTotal * (lineGstHalf / 100);
+        runningTds += lineTotal * (tdsRate / 100);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${comp ? (comp.Description || comp.Details || comp.name) : 'Custom Item'}</td>
+            <td>${comp ? (comp.HSN || comp.hsn) : '998898'}</td>
+            <td class="text-right">${qty}</td>
+            <td class="text-right">${price.toFixed(2)}</td>
+            <td class="text-right">${lineTotal.toFixed(2)}</td>
+        `;
+        printTbody.appendChild(tr);
+    });
+
+    const invoiceTotal = runningSubtotal + runningCgst + runningSgst;
+    const netPayablePreRound = invoiceTotal - runningTds;
+    const netPayableRounded = Math.round(netPayablePreRound);
+
+    document.getElementById('valSub').innerText = runningSubtotal.toFixed(2);
+    document.getElementById('valCgst').innerText = runningCgst.toFixed(2);
+    document.getElementById('valSgst').innerText = runningSgst.toFixed(2);
+    document.getElementById('valTotal').innerText = invoiceTotal.toFixed(2);
+    document.getElementById('valTds').innerText = `-${runningTds.toFixed(2)}`;
+    document.getElementById('valPayable').innerText = netPayableRounded.toFixed(2);
+    document.getElementById('valWords').innerText = numToWords(netPayableRounded) + " Only";
+}
+
+function numToWords(num) {
+    const a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    if ((num = num.toString()).length > 9) return 'Overflow';
+    let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if (!n) return ''; 
+    let str = '';
+    str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+    str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+    str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+    str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+    str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+    return str.trim() ? 'Rupees ' + str : 'Zero Rupees';
+}
+
+function exportA4PDF() {
+    const element = document.getElementById('print-area');
+    const filenameString = document.getElementById('uiInvNo').value.replace(/\//g, '_');
+    
+    const opt = {
+        margin:       [10, 5, 10, 5],
+        filename:     `Invoice_${filenameString}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().from(element).set(opt).save();
+}
+
+window.onload = loadExternalData;
+</script>
+</body>
+</html>
