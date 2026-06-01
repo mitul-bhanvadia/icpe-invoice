@@ -488,14 +488,33 @@ function exportA4PDF() {
     const element = document.getElementById('print-area');
     const filenameString = document.getElementById('uiInvNo').value.replace(/\//g, '_');
     
+    // 1. Force the layout container to look exactly like a desktop view before rendering
+    const originalWidth = element.style.width;
+    const originalPadding = element.style.padding;
+    
+    element.style.width = "210mm"; // Lock to true A4 width sizing layout
+    element.style.padding = "15mm"; // Restore safety borders
+    
     const opt = {
-        margin:       [10, 5, 10, 5],
+        margin:       0, // Zero out html2pdf margin to prevent shifting double margins
         filename:     `Invoice_${filenameString}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  { 
+            scale: 2, 
+            useCORS: true, 
+            logging: false,
+            width: 794, // Force canvas engine to snap to exactly 210mm in pixels (at 96 DPI)
+            windowWidth: 794 // Tricks the engine into thinking it's running on a wide desktop screen
+        },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    html2pdf().from(element).set(opt).save();
+    
+    // 2. Execute the print pipeline and restore mobile layout settings right after capture finishes
+    html2pdf().from(element).set(opt).toContainer().toCanvas().toPdf().save().then(() => {
+        // Reset styles back so the live preview on your phone screen looks normal again
+        element.style.width = originalWidth;
+        element.style.padding = originalPadding;
+    });
 }
 
 window.onload = loadExternalData;
