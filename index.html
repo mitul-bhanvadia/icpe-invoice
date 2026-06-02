@@ -3,48 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICPE Invoice Engine Pro v2</title>
+    <title>ICPE ERP Engine v3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<style>
-        :root { --primary: #0f172a; --accent: #2563eb; }
+    <style>
+        :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; margin: 0; padding: 15px; color: #334155; }
         
-        /* Interactive Input Form Panel */
+        /* Interactive Panel Elements */
         .no-print { max-width: 850px; margin: 0 auto 20px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
+        h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 15px; }
         label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #64748b; }
-        select, input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         
-        /* Desktop Item Input Table */
+        /* Tab Controls */
+        .tab-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-btn { background: #e2e8f0; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 6px; color: #475569; }
+        .tab-btn.active { background: var(--accent); color: white; }
+        
         .ui-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .ui-table th { background: #f8fafc; text-align: left; padding: 10px; font-size: 13px; color: #64748b; }
         .ui-table td { padding: 8px 4px; }
         
-        .btn { background: var(--accent); color: white; border: none; padding: 12px 18px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; }
-        .btn-danger { background: #ef4444; width: 100%; }
-        .btn-success { background: #10b981; width: 100%; padding: 14px; font-size: 16px; margin-top: 15px; }
+        .btn { background: var(--accent); color: white; border: none; padding: 10px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-danger { background: #ef4444; }
+        .btn-success { background: var(--success); width: 100%; padding: 12px; font-size: 16px; margin-top: 10px; }
+        .btn-alt { background: #475569; margin-right: 5px; }
         
-        /* Mobile Form Factor Screen Adjustments */
-        @media screen and (max-width: 768px) {
-            .ui-table thead { display: none; }
-            .ui-table tr { display: block; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 15px; }
-            .ui-table td { display: block; width: 100% !important; box-sizing: border-box; padding: 6px 0; }
-            .ui-table td:nth-child(1)::before { content: "Component Description"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
-            .ui-table td:nth-child(2)::before { content: "Quantity (Nos)"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
-            .ui-table td:nth-child(3)::before { content: "Unit Price (INR)"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
-            .ui-table td:nth-child(4)::before { content: "GST %"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
-            .ui-table td:nth-child(5)::before { content: "TDS %"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
-            #print-area { width: 100%; padding: 10px; font-size: 11px; overflow-x: auto; box-shadow: none; }
-            .totals-section { flex-direction: column; }
-            .bank-details, .summary-box { width: 100%; margin-bottom: 15px; }
-        }
+        /* Viewer List Format */
+        .history-item { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
 
-        /* --- Screen Preview Container Layout --- */
-        @media screen {
-            #print-area { max-width: 190mm; background: white; margin: 0 auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; padding: 15mm; margin-bottom: 50px; box-sizing: border-box; }
-        }
-        #print-area { font-size: 12px; color: #000; line-height: 1.4; }
+        /* --- Strict Fixed A4 Output Constraints --- */
+        #print-area { width: 190mm; background: white; margin: 0 auto; box-sizing: border-box; font-size: 12px; color: #000; line-height: 1.4; }
         .inv-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; }
         .company-title { font-size: 20px; font-weight: bold; margin: 0; }
         .inv-type-badge { border: 1px solid #000; padding: 4px 10px; font-weight: bold; font-size: 11px; text-transform: uppercase; align-self: flex-start; }
@@ -54,72 +44,86 @@
         .item-table th { background: #f1f5f9; text-align: left; }
         .text-right { text-align: right; }
         .totals-section { display: flex; justify-content: space-between; margin-top: 15px; page-break-inside: avoid; }
-        .bank-details { width: 50%; font-size: 11px; border: 1px dashed #000; padding: 8px; box-sizing: border-box; }
+        .bank-details { width: 50%; font-size: 11px; border: 1px dashed #000; padding: 8px; }
         .summary-box { width: 46%; }
         .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
         .grand-total { font-size: 14px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin-top: 4px; }
         .sign-block { margin-top: 35px; text-align: right; font-weight: bold; page-break-inside: avoid; }
 
-        /* --- STRICT HARDWARE PRINT ENGINE CONSTAL (Forces pristine A4 formatting on export) --- */
-        @media print {
-            @page { size: A4 portrait; margin: 15mm 10mm 15mm 10mm; }
-            body { background: white; padding: 0; margin: 0; color: #000; }
-            .no-print { display: none !important; } /* Hides all calculator buttons & controls completely */
-            #print-area { width: 100% !important; max-width: 100% !important; padding: 0 !important; box-shadow: none !important; display: block !important; }
-            .totals-section { display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
-            .bank-details { width: 50% !important; display: block !important; }
-            .summary-box { width: 46% !important; display: block !important; }
+        @media screen {
+            #print-area { box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; padding: 15mm; margin-bottom: 50px; }
         }
-              </style>
+        @media print {
+            @page { size: A4 portrait; margin: 15mm 10mm; }
+            .no-print { display: none !important; }
+            #print-area { width: 100% !important; padding: 0 !important; box-shadow: none !important; }
+        }
+    </style>
 </head>
 <body>
 
 <div class="no-print">
-    <h3>⚡ ICPE Invoice Engine & Calculator</h3>
-    
-    <div class="grid">
-        <div>
-            <label>1. Client Profile</label>
-            <select id="uiClient" onchange="mapClient()"><option>Parsing live profiles...</option></select>
-        </div>
-        <div>
-            <label>Document Badge</label>
-            <select id="uiCopy" onchange="render()">
-                <option value="Original Copy">Original Copy</option>
-                <option value="Duplicate Copy">Duplicate Copy</option>
-                <option value="Triplicate Copy">Triplicate Copy</option>
-            </select>
-        </div>
-        <div>
-            <label>Invoice Number</label>
-            <input type="text" id="uiInvNo" value="ICPE/003" oninput="render()">
-        </div>
-        <div>
-            <label>Challan / Job Card No.</label>
-            <input type="text" id="uiJobCard" value="024" oninput="render()">
-        </div>
+    <div class="tab-box">
+        <button class="tab-btn active" id="tabCreate" onclick="switchTab('CREATE')">＋ Create New Invoice</button>
+        <button class="tab-btn" id="tabView" onclick="switchTab('VIEW')">🔍 Historical Records Viewer</button>
     </div>
 
-    <hr style="border:0; border-top:1px solid #e2e8f0; margin:15px 0;">
-    <label style="font-size:15px; color:var(--primary); margin-bottom:10px;">Line Items (Dynamic Work Orders)</label>
-    
-    <table class="ui-table" id="uiItemTable">
-        <thead>
-            <tr>
-                <th style="width:40%">Component / Jobwork Description</th>
-                <th style="width:15%">Qty</th>
-                <th style="width:15%">Unit Price</th>
-                <th style="width:12%">GST %</th>
-                <th style="width:10%">TDS %</th>
-                <th style="width:8%">Action</th>
-            </tr>
-        </thead>
-        <tbody id="itemRows">
-            </tbody>
-    </table>
-    
-    <button class="btn" onclick="addNewRow()">＋ Add Item Line</button>
-    <button class="btn btn-success" onclick="exportA4PDF()">💾 Save Perfectly Aligned A4 PDF</button>
+    <div id="panelCreate">
+        <h3>⚡ ICPE Billing Engine</h3>
+        <div class="grid">
+            <div>
+                <label>Target Client Profile</label>
+                <select id="uiClient" onchange="mapClient()"><option>Syncing database...</option></select>
+            </div>
+            <div>
+                <label>Invoice Date</label>
+                <input type="date" id="uiDate" onchange="render()">
+            </div>
+            <div>
+                <label>Invoice Number</label>
+                <input type="text" id="uiInvNo" value="ICPE/001" oninput="render()">
+            </div>
+            <div>
+                <label>Challan / Job Card</label>
+                <input type="text" id="uiJobCard" value="024" oninput="render()">
+            </div>
+            <div>
+                <label>Document Badge</label>
+                <select id="uiCopy" onchange="render()">
+                    <option value="Original Copy">Original Copy</option>
+                    <option value="Duplicate Copy">Duplicate Copy</option>
+                    <option value="Triplicate Copy">Triplicate Copy</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="ui-table">
+            <thead>
+                <tr>
+                    <th style="width:45%">Component / Jobwork Variant</th>
+                    <th style="width:15%">Qty</th>
+                    <th style="width:15%">Unit Price</th>
+                    <th style="width:10%">GST %</th>
+                    <th style="width:10%">TDS %</th>
+                    <th style="width:5%"></th>
+                </tr>
+            </thead>
+            <tbody id="itemRows"></tbody>
+        </table>
+        
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-alt" onclick="addNewRow()">＋ Add Line Item</button>
+            <button class="btn" style="background:#4f46e5" onclick="exportDesktopPDF()">🖥️ Save Desktop Layout PDF</button>
+        </div>
+        <button class="btn btn-success" onclick="commitToCloudLedger()">☁️ Post Transaction to Cloud Ledger</button>
+    </div>
+
+    <div id="panelView" style="display:none;">
+        <h3>📜 Closed Ledger Audit Records</h3>
+        <div id="historyList" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">
+            </div>
+        <p style="font-size:12px; color:#64748b; font-style:italic;">* Viewing historical mode disables row adjustments to preserve data compliance integrity.</p>
+    </div>
 </div>
 
 <div id="print-area">
@@ -138,14 +142,14 @@
     <table class="meta-table">
         <tr>
             <td>
-                <strong>To </strong><br>
+                <strong>To (Client Details):</strong><br>
                 <span id="lblClientName" style="font-weight:bold;">-</span><br>
                 Address: <span id="lblClientAddr">-</span><br>
                 Phone: <span id="lblClientPhone">-</span><br>
                 <strong>GSTIN: <span id="lblClientGst">-</span></strong>
             </td>
             <td>
-                <strong>Invoice data:</strong><br>
+                <strong>Invoice Metadata:</strong><br>
                 Invoice No: <span id="lblInvNo" style="font-weight:bold;">-</span><br>
                 Date: <span id="lblDate">-</span><br>
                 Challan/Job Card Reference: <span id="lblJobCard">-</span>
@@ -163,8 +167,7 @@
                 <th style="width: 15%;" class="text-right">Total (INR)</th>
             </tr>
         </thead>
-        <tbody id="printItemRows">
-            </tbody>
+        <tbody id="printItemRows"></tbody>
     </table>
 
     <div class="totals-section">
@@ -203,244 +206,317 @@
 </div>
 
 <script>
-// --- CORRECTED GOOGLE API DATA LINK CONFIGURATION ---
+// --- CORE ERP DATABASE ENDPOINT VARIABLES ---
 const MASTER_SHEET_ID = "1CGpO35mnhNtv4QjeVojEf-3s78gYllV-dZb6HnHSnS4";
+// PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL DEPLOYMENT LINK HERE:
+const APPS_SCRIPT_WEB_APP_URL = "YOUR_PASTED_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
 
-// Using explicit custom handlers to capture the visual query stream safely bypassing CORS restrictions
-const CLIENTS_CSV_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=0&tqx=responseHandler:handleClientsResponse`;
-const COMPONENTS_CSV_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=657996699&tqx=responseHandler:handleComponentsResponse`;
+const CLIENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=0&tqx=responseHandler:handleClientsResponse`;
+const COMPONENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=657996699&tqx=responseHandler:handleComponentsResponse`;
 
 let clientsDB = [];
 let componentsDB = [];
-
-// Clean offline backup lists
-const localClientsFallback = [{id:"zeck", CompanyName:"ZECK PRIVATE LIMITED", Address:"3rd Floor, 13 Landmark, Gotri Road, Sevasi, Vadodara - 391101", Phone:"+91 - 75749 88882", GSTIN:"24AAACZ9258L1ZQ"}];
-const localItemsFallback = [
-    {id:"rgb8_216", Description:"RGB_8_T_4M_v.26(216P) - SMT Jobwork", HSN:"998898", BasePrice:25.92, DefaultGST:18, DefaultTDS:2},
-    {id:"ztcw_v8", Description:"ZTCW_TCH4_V8 – SMD Job work", HSN:"998898", BasePrice:15.24, DefaultGST:12, DefaultTDS:2}
-];
-
-let clientsLoaded = false;
-let componentsLoaded = false;
+let historicalLedger = [];
+let viewOnlyMode = false;
 
 function loadExternalData() {
-    // 1. Script injection for Clients
-    const scriptClient = document.createElement('script');
-    scriptClient.src = CLIENTS_CSV_URL;
-    document.body.appendChild(scriptClient);
-
-    // 2. Script injection for Components
-    const scriptComp = document.createElement('script');
-    scriptComp.src = COMPONENTS_CSV_URL;
-    document.body.appendChild(scriptComp);
+    document.getElementById('uiDate').value = new Date().toISOString().slice(0,10);
     
-    // Safety check timeout: If Google takes over 4 seconds, drop back to local profiles
-    setTimeout(() => {
-        if (!clientsLoaded || !componentsLoaded) {
-            console.log("Network timeout. Deploying default backup array states.");
-            if (!clientsLoaded) { clientsDB = localClientsFallback; clientsLoaded = true; }
-            if (!componentsLoaded) { componentsDB = localItemsFallback; componentsLoaded = true; }
-            initApp();
-        }
-    }, 4000);
+    const sClient = document.createElement('script'); sClient.src = CLIENTS_API_URL; document.body.appendChild(sClient);
+    const sComp = document.createElement('script'); sComp.src = COMPONENTS_API_URL; document.body.appendChild(sComp);
+    
+    fetchHistoricalLedger();
 }
 
-// Global Response Handler for Clients
-window.handleClientsResponse = function(response) {
-    try {
-        if (response && response.table) {
-            clientsDB = parseGoogleJson(response.table);
-            clientsDB.forEach((c, idx) => { if(!c.id) c.id = c.CompanyName ? c.CompanyName.toLowerCase().replace(/\s+/g, '') : 'client_' + idx; });
-            clientsLoaded = true;
-            checkLoadingComplete();
-        }
-    } catch(e) { console.error("Error structural handling client json rows:", e); }
-};
+window.handleClientsResponse = function(r) { if(r&&r.table){ clientsDB = parseGoogleJson(r.table, 'CLIENT'); initClientUI(); } };
+window.handleComponentsResponse = function(r) { if(r&&r.table){ componentsDB = parseGoogleJson(r.table, 'COMP'); render(); } };
 
-// Global Response Handler for Components
-window.handleComponentsResponse = function(response) {
-    try {
-        if (response && response.table) {
-            componentsDB = parseGoogleJson(response.table);
-            componentsDB.forEach((item, idx) => { if(!item.id) item.id = item.Description ? item.Description.toLowerCase().replace(/\s+/g, '') : 'item_' + idx; });
-            componentsLoaded = true;
-            checkLoadingComplete();
-        }
-    } catch(e) { console.error("Error structural handling component json rows:", e); }
-};
-
-function parseGoogleJson(table) {
-    // Build a map of column labels, but fallback to their letter positions if labels are blank
-    const headers = table.cols.map((col, idx) => {
-        if (col.label && col.label.trim() !== "") {
-            return col.label.trim();
-        }
-        // Fallback positioning mapping mapping arrays safely
-        const alphabet = ['A','B','C','D','E','F','G','H','I','J','K'];
-        return alphabet[idx] || 'Col' + idx;
-    });
-
+function parseGoogleJson(table, type) {
+    const headers = table.cols.map(col => col.label ? col.label.trim() : '');
     return table.rows.map(row => {
         let obj = {};
-        row.c.forEach((cell, i) => {
-            const headerName = headers[i];
-            if (headerName) {
-                // Read the cell value, fallback to empty string if null
-                obj[headerName] = cell && cell.v !== null ? cell.v.toString().trim() : '';
-            }
-        });
+        row.c.forEach((cell, i) => { if(headers[i]) obj[headers[i]] = cell && cell.v !== null ? cell.v.toString().trim() : ''; });
         
-        // POSITIONAL FALLBACKS: If names aren't matched by exact headers, map them by standard column position
-        if (!obj.id && row.c[0]) obj.id = row.c[0].v ? row.c[0].v.toString().trim() : '';
-        
-        // Clients Positional Mapping (Col A: id, Col B: CompanyName, Col C: Address, Col D: Phone, Col E: GSTIN)
-        if (row.c[1] && !obj.CompanyName) obj.CompanyName = row.c[1].v ? row.c[1].v.toString().trim() : '';
-        if (row.c[2] && !obj.Address) obj.Address = row.c[2].v ? row.c[2].v.toString().trim() : '';
-        if (row.c[3] && !obj.Phone) obj.Phone = row.c[3].v ? row.c[3].v.toString().trim() : '';
-        if (row.c[4] && !obj.GSTIN) obj.GSTIN = row.c[4].v ? row.c[4].v.toString().trim() : '';
-
-        // Components Positional Mapping (Col A: id, Col B: Description, Col C: HSN, Col D: BasePrice, Col E: DefaultGST, Col F: DefaultTDS)
-        if (row.c[1] && !obj.Description) obj.Description = row.c[1].v ? row.c[1].v.toString().trim() : '';
-        if (row.c[2] && !obj.HSN) obj.HSN = row.c[2].v ? row.c[2].v.toString().trim() : '';
-        if (row.c[3] && !obj.BasePrice) obj.BasePrice = row.c[3].v ? row.c[3].v.toString().trim() : '';
-        if (row.c[4] && !obj.DefaultGST) obj.DefaultGST = row.c[4].v ? row.c[4].v.toString().trim() : '';
-        if (row.c[5] && !obj.DefaultTDS) obj.DefaultTDS = row.c[5].v ? row.c[5].v.toString().trim() : '';
-
+        // Dynamic structural position mapping configuration fallbacks
+        if(type === 'CLIENT') {
+            if(row.c[0] && !obj.id) obj.id = row.c[0].v;
+            if(row.c[1] && !obj.CompanyName) obj.CompanyName = row.c[1].v;
+            if(row.c[2] && !obj.Address) obj.Address = row.c[2].v;
+            if(row.c[3] && !obj.Phone) obj.Phone = row.c[3].v;
+            if(row.c[4] && !obj.GSTIN) obj.GSTIN = row.c[4].v;
+        } else {
+            if(row.c[0] && !obj.id) obj.id = row.c[0].v;
+            if(row.c[1] && !obj.Description) obj.Description = row.c[1].v;
+            if(row.c[2] && !obj.HSN) obj.HSN = row.c[2].v;
+            if(row.c[3] && !obj.BasePrice) obj.BasePrice = row.c[3].v;
+            if(row.c[4] && !obj.DefaultGST) obj.DefaultGST = row.c[4].v;
+            if(row.c[5] && !obj.DefaultTDS) obj.DefaultTDS = row.c[5].v;
+        }
         return obj;
     });
 }
 
-function checkLoadingComplete() {
-    if (clientsLoaded && componentsLoaded) {
-        initApp();
+function fetchHistoricalLedger() {
+    if(APPS_SCRIPT_WEB_APP_URL.startsWith("http")) {
+        fetch(APPS_SCRIPT_WEB_APP_URL)
+        .then(res => res.json())
+        .then(data => {
+            historicalLedger = data;
+            generateSequentialInvoiceNumber();
+            populateHistoryViewer();
+        }).catch(e => console.log("Ledger fetch offline/restricted state.", e));
     }
 }
 
-function initApp() {
-    const cSelect = document.getElementById('uiClient');
-    cSelect.innerHTML = "";
+function generateSequentialInvoiceNumber() {
+    if(historicalLedger.length === 0) return;
     
-    if (clientsDB.length === 0) {
-        cSelect.add(new Option("No profiles found inside database", ""));
-    } else {
-        clientsDB.forEach(c => { 
-            // Look for any variation of name fields, fallback to its raw ID if all headers fail
-            let name = c.CompanyName || c.Company || c.name || c.B || c.id || "Unknown Client";
-            cSelect.add(new Option(name, c.id)); 
-        });
-    }
+    // Extract numerical sequence patterns out of past invoice numbers (e.g., matching ICPE/003 )
+    let maxNum = 0;
+    historicalLedger.forEach(row => {
+        if(row.InvoiceNo) {
+            let matches = row.InvoiceNo.match(/\d+/);
+            if(matches) {
+                let num = parseInt(matches[0]);
+                if(num > maxNum) maxNum = num;
+            }
+        }
+    });
     
-    document.getElementById('lblDate').innerText = new Date().toISOString().slice(0,10);
+    let nextNumString = (maxNum + 1).toString().padStart(3, '0');
+    document.getElementById('uiInvNo').value = `ICPE/${nextNumString}`;
+    render();
+}
+
+function initClientUI() {
+    const s = document.getElementById('uiClient'); s.innerHTML = "";
+    clientsDB.forEach(c => s.add(new Option(c.CompanyName || c.id, c.id)));
     mapClient();
     addNewRow();
 }
 
 function mapClient() {
-    const cid = document.getElementById('uiClient').value;
-    const client = clientsDB.find(c => c.id === cid);
-    if (client) {
-        document.getElementById('lblClientName').innerText = client.CompanyName || client.Company || client.name || client.B || '-';
-        document.getElementById('lblClientAddr').innerText = client.Address || client.address || client.C || '-';
-        document.getElementById('lblClientPhone').innerText = client.Phone || client.phone || client["Phone 1 "] || client.D || '-';
-        document.getElementById('lblClientGst').innerText = client.GSTIN || client.gstin || client["GST No"] || client.E || '-';
+    if(viewOnlyMode) return;
+    const client = clientsDB.find(c => c.id === document.getElementById('uiClient').value);
+    if(client) {
+        document.getElementById('lblClientName').innerText = client.CompanyName || '-';
+        document.getElementById('lblClientAddr').innerText = client.Address || '-';
+        document.getElementById('lblClientPhone').innerText = client.Phone || '-';
+        document.getElementById('lblClientGst').innerText = client.GSTIN || '-';
     }
     render();
 }
 
 function addNewRow() {
     const tbody = document.getElementById('itemRows');
-    const rowId = Date.now();
+    const rId = Date.now();
     const tr = document.createElement('tr');
-    tr.id = `row-${rowId}`;
+    tr.id = `row-${rId}`;
     
-    let options = componentsDB.map(i => `<option value="${i.id}">${i.Description || i.Details || i.name}</option>`).join('');
-    
+    let opts = componentsDB.map(i => `<option value="${i.id}">${i.Description}</option>`).join('');
     tr.innerHTML = `
-        <td><select class="row-item" onchange="mapRowItem('${rowId}')">${options}</select></td>
+        <td><select class="row-item" onchange="mapRowItem('${rId}')">${opts}</select></td>
         <td><input type="number" class="row-qty" value="1" oninput="render()"></td>
         <td><input type="number" step="0.01" class="row-price" value="0.00" oninput="render()"></td>
         <td><input type="number" class="row-gst" value="18" oninput="render()"></td>
         <td><input type="number" step="0.1" class="row-tds" value="2.0" oninput="render()"></td>
-        <td><button class="btn btn-danger" onclick="deleteRow('${rowId}')">✕</button></td>
+        <td><button class="btn btn-danger" onclick="deleteRow('${rId}')">✕</button></td>
     `;
     tbody.appendChild(tr);
-    mapRowItem(rowId);
+    mapRowItem(rId);
 }
 
 function deleteRow(id) {
-    const rows = document.querySelectorAll('#itemRows tr');
-    if(rows.length > 1) {
-        document.getElementById(`row-${id}`).remove();
-    } else {
-        alert("Invoice requires at least 1 transactional line item entry.");
+    if(document.querySelectorAll('#itemRows tr').length > 1) {
+        document.getElementById(`row-${id}`).remove(); render();
     }
-    render();
 }
 
-function mapRowItem(rowId) {
-    const row = document.getElementById(`row-${rowId}`);
-    const compId = row.querySelector('.row-item').value;
-    const comp = componentsDB.find(c => c.id === compId);
+function mapRowItem(rId) {
+    const row = document.getElementById(`row-${rId}`);
+    const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
     if(comp) {
-        row.querySelector('.row-price').value = comp.BasePrice || comp["Unit Price"] || comp.basePrice || 0;
-        row.querySelector('.row-gst').value = comp.DefaultGST || comp.defaultGst || 18;
-        row.querySelector('.row-tds').value = comp.DefaultTDS || comp.defaultTds || 2;
+        row.querySelector('.row-price').value = comp.BasePrice || 0;
+        row.querySelector('.row-gst').value = comp.DefaultGST || 18;
+        row.querySelector('.row-tds').value = comp.DefaultTDS || 2;
     }
     render();
 }
 
 function render() {
+    // Collect Metadata
     document.getElementById('lblCopy').innerText = document.getElementById('uiCopy').value;
     document.getElementById('lblInvNo').innerText = document.getElementById('uiInvNo').value;
     document.getElementById('lblJobCard').innerText = document.getElementById('uiJobCard').value;
+    document.getElementById('lblDate').innerText = document.getElementById('uiDate').value;
 
     const rows = document.querySelectorAll('#itemRows tr');
     const printTbody = document.getElementById('printItemRows');
     printTbody.innerHTML = "";
 
-    let runningSubtotal = 0;
-    let runningCgst = 0;
-    let runningSgst = 0;
-    let runningTds = 0;
+    let subtotal = 0, cgst = 0, sgst = 0, tds = 0;
 
     rows.forEach(row => {
-        const compId = row.querySelector('.row-item').value;
-        const comp = componentsDB.find(c => c.id === compId);
-        const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
-        const price = parseFloat(row.querySelector('.row-price').value) || 0;
-        const gstTotalRate = parseFloat(row.querySelector('.row-gst').value) || 0;
-        const tdsRate = parseFloat(row.querySelector('.row-tds').value) || 0;
+        let name = "";
+        let hsn = "998898";
+        
+        if(viewOnlyMode) {
+            name = row.dataset.desc;
+            hsn = row.dataset.hsn;
+        } else {
+            const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
+            name = comp ? comp.Description : 'Custom Item';
+            hsn = comp ? comp.HSN : '998898';
+        }
+        
+        const qty = parseFloat(row.querySelector('.row-qty').value || row.querySelector('.row-qty').innerText) || 0;
+        const price = parseFloat(row.querySelector('.row-price').value || row.querySelector('.row-price').innerText) || 0;
+        const gstRate = parseFloat(row.querySelector('.row-gst').value || row.querySelector('.row-gst').innerText) || 0;
+        const tdsRate = parseFloat(row.querySelector('.row-tds').value || row.querySelector('.row-tds').innerText) || 0;
 
-        const lineTotal = qty * price;
-        runningSubtotal += lineTotal;
+        let total = qty * price;
+        subtotal += total;
+        cgst += total * ((gstRate / 2) / 100);
+        sgst += total * ((gstRate / 2) / 100);
+        tds += total * (tdsRate / 100);
 
-        const lineGstHalf = gstTotalRate / 2;
-        runningCgst += lineTotal * (lineGstHalf / 100);
-        runningSgst += lineTotal * (lineGstHalf / 100);
-        runningTds += lineTotal * (tdsRate / 100);
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${comp ? (comp.Description || comp.Details || comp.name) : 'Custom Item'}</td>
-            <td>${comp ? (comp.HSN || comp.hsn) : '998898'}</td>
-            <td class="text-right">${qty}</td>
-            <td class="text-right">${price.toFixed(2)}</td>
-            <td class="text-right">${lineTotal.toFixed(2)}</td>
-        `;
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${name}</td><td>${hsn}</td><td class="text-right">${qty}</td><td class="text-right">${price.toFixed(2)}</td><td class="text-right">${total.toFixed(2)}</td>`;
         printTbody.appendChild(tr);
     });
 
-    const invoiceTotal = runningSubtotal + runningCgst + runningSgst;
-    const netPayablePreRound = invoiceTotal - runningTds;
-    const netPayableRounded = Math.round(netPayablePreRound);
+    let grandTotal = subtotal + cgst + sgst;
+    let netPayable = Math.round(grandTotal - tds);
 
-    document.getElementById('valSub').innerText = runningSubtotal.toFixed(2);
-    document.getElementById('valCgst').innerText = runningCgst.toFixed(2);
-    document.getElementById('valSgst').innerText = runningSgst.toFixed(2);
-    document.getElementById('valTotal').innerText = invoiceTotal.toFixed(2);
-    document.getElementById('valTds').innerText = `-${runningTds.toFixed(2)}`;
-    document.getElementById('valPayable').innerText = netPayableRounded.toFixed(2);
-    document.getElementById('valWords').innerText = numToWords(netPayableRounded) + " Only";
+    document.getElementById('valSub').innerText = subtotal.toFixed(2);
+    document.getElementById('valCgst').innerText = cgst.toFixed(2);
+    document.getElementById('valSgst').innerText = sgst.toFixed(2);
+    document.getElementById('valTotal').innerText = grandTotal.toFixed(2);
+    document.getElementById('valTds').innerText = `-${tds.toFixed(2)}`;
+    document.getElementById('valPayable').innerText = netPayable.toFixed(2);
+    document.getElementById('valWords').innerText = numToWords(netPayable) + " Only";
+}
+
+function commitToCloudLedger() {
+    if(!APPS_SCRIPT_WEB_APP_URL.startsWith("http")) { alert("Please hook up deployment script endpoint first."); return; }
+    
+    const invNo = document.getElementById('uiInvNo').value.trim();
+    const date = document.getElementById('uiDate').value;
+    const clientName = document.getElementById('lblClientName').innerText;
+
+    // Direct Pre-commit Validation: Confirm index uniqueness array patterns
+    const duplicate = historicalLedger.some(row => row.InvoiceNo.toString().toLowerCase() === invNo.toLowerCase());
+    if(duplicate) {
+        alert(`Data Entry Error: Invoice Reference ${invNo} already logged inside Drive database Ledger!`);
+        return;
+    }
+
+    let itemsPayload = [];
+    document.querySelectorAll('#itemRows tr').forEach(row => {
+        const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
+        const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.row-price').value) || 0;
+        const lineVal = qty * price;
+        
+        itemsPayload.push({
+            desc: comp ? comp.Description : 'SMT/SMD Jobwork',
+            qty: qty,
+            price: price,
+            gst: (lineVal * 0.18).toFixed(2),
+            tds: (lineVal * 0.02).toFixed(2)
+        });
+    });
+
+    const payload = { invoiceNo: invNo, date: date, clientName: clientName, items: itemsPayload };
+
+    fetch(APPS_SCRIPT_WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors', // Bypasses browser cross-origin preflight locks safely
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        alert("Transaction posted successfully!");
+        location.reload(); // Hard reboots app context resetting arrays
+    }).catch(e => alert("Network transmission fault recorded: " + e));
+}
+
+function populateHistoryViewer() {
+    const container = document.getElementById('historyList');
+    container.innerHTML = "";
+    
+    // Group records by Invoice unique array index bounds keys
+    let uniqueInvoices = {};
+    historicalLedger.forEach(row => {
+        if(!uniqueInvoices[row.InvoiceNo]) {
+            uniqueInvoices[row.InvoiceNo] = { invoiceNo: row.InvoiceNo, date: row.Date, client: row.ClientName, items: [] };
+        }
+        uniqueInvoices[row.InvoiceNo].items.push(row);
+    });
+
+    Object.values(uniqueInvoices).forEach(inv => {
+        let div = document.createElement('div');
+        div.className = "history-item";
+        div.innerHTML = `
+            <div>
+                <strong>${inv.invoiceNo}</strong> | <span style="font-size:12px;color:#64748b;">${inv.date.slice(0,10)}</span><br>
+                <small>${inv.client}</small>
+            </div>
+            <button class="btn btn-alt" style="padding:6px 12px; font-size:12px;" onclick="viewClosedInvoice('${inv.invoiceNo}')">👁️ View Document</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function viewClosedInvoice(invNo) {
+    viewOnlyMode = true;
+    switchTab('CREATE'); // Switch view framing to template preview window
+    document.getElementById('panelCreate').querySelector('h3').innerText = "📋 Audit Document View Mode";
+    
+    // Hide administrative creation buttons
+    document.querySelector('.btn-success').style.display = "none";
+    document.querySelector('.btn-alt').style.display = "none";
+
+    let matchingRows = historicalLedger.filter(row => row.InvoiceNo === invNo);
+    if(matchingRows.length === 0) return;
+
+    let target = matchingRows[0];
+    document.getElementById('lblClientName').innerText = target.ClientName;
+    document.getElementById('lblInvNo').innerText = target.InvoiceNo;
+    document.getElementById('lblDate').innerText = target.Date.slice(0,10);
+    
+    // Feed historical strings over to elements
+    const tbody = document.getElementById('itemRows');
+    tbody.innerHTML = "";
+    matchingRows.forEach(row => {
+        let tr = document.createElement('tr');
+        tr.dataset.desc = row.ComponentDescription;
+        tr.dataset.hsn = "998898";
+        tr.innerHTML = `
+            <td><strong>${row.ComponentDescription}</strong></td>
+            <td><span class="row-qty">${row.Qty}</span></td>
+            <td><span class="row-price">${row.UnitPrice}</span></td>
+            <td><span class="row-gst">18</span></td>
+            <td><span class="row-tds">2.0</span></td>
+            <td>-</td>
+        `;
+        tbody.appendChild(tr);
+    });
+    render();
+}
+
+function switchTab(target) {
+    if(target === 'CREATE') {
+        document.getElementById('panelCreate').style.display = "block";
+        document.getElementById('panelView').style.display = "none";
+        document.getElementById('tabCreate').className = "tab-btn active";
+        document.getElementById('tabView').className = "tab-btn";
+    } else {
+        document.getElementById('panelCreate').style.display = "none";
+        document.getElementById('panelView').style.display = "block";
+        document.getElementById('tabCreate').className = "tab-btn";
+        document.getElementById('tabView').className = "tab-btn active";
+        populateHistoryViewer();
+    }
 }
 
 function numToWords(num) {
@@ -458,19 +534,7 @@ function numToWords(num) {
     return str.trim() ? 'Rupees ' + str : 'Zero Rupees';
 }
 
-function exportA4PDF() {
-    // Simply sets the page title dynamically so the device automatically saves the file with your invoice number
-    const invNum = document.getElementById('uiInvNo').value.replace(/\//g, '_');
-    const originalTitle = document.title;
-    
-    document.title = `Invoice_${invNum}`;
-    
-    // Fires your device's native print engine. On Android/iOS, this will smoothly open the "Save as PDF" modal.
-    window.print();
-    
-    // Reset page title back to application default right after print close execution
-    document.title = originalTitle;
-}
+function exportDesktopPDF() { window.print(); }
 
 window.onload = loadExternalData;
 </script>
