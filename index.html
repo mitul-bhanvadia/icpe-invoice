@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICPE ERP Engine v3</title>
+    <title>ICPE ERP Engine v3.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; }
@@ -18,6 +18,7 @@
         
         /* Tab Controls */
         .tab-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-box .btn-view-mode { background: #f59e0b; color: white; display: none; margin-left: auto; }
         .tab-btn { background: #e2e8f0; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 6px; color: #475569; }
         .tab-btn.active { background: var(--accent); color: white; }
         
@@ -66,10 +67,11 @@
     <div class="tab-box">
         <button class="tab-btn active" id="tabCreate" onclick="switchTab('CREATE')">＋ Create New Invoice</button>
         <button class="tab-btn" id="tabView" onclick="switchTab('VIEW')">🔍 Historical Records Viewer</button>
+        <button class="tab-btn btn-view-mode" id="btnExitView" onclick="exitViewMode()">⚠️ Exit View Mode</button>
     </div>
 
     <div id="panelCreate">
-        <h3>⚡ ICPE Billing Engine</h3>
+        <h3 id="panelHeader">⚡ ICPE Billing Engine</h3>
         <div class="grid">
             <div>
                 <label>Target Client Profile</label>
@@ -112,10 +114,10 @@
         </table>
         
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-alt" onclick="addNewRow()">＋ Add Line Item</button>
-            <button class="btn" style="background:#4f46e5" onclick="exportDesktopPDF()">🖥️ Save Desktop Layout PDF</button>
+            <button class="btn btn-alt" id="btnAddLine" onclick="addNewRow()">＋ Add Line Item</button>
+            <button class="btn" style="background:#4f46e5" onclick="exportDesktopPDF()">I Perfect PDF/Print</button>
         </div>
-        <button class="btn btn-success" onclick="commitToCloudLedger()">☁️ Post Transaction to Cloud Ledger</button>
+        <button class="btn btn-success" id="btnPostCloud" onclick="commitToCloudLedger()">☁️ Post Transaction to Cloud Ledger</button>
     </div>
 
     <div id="panelView" style="display:none;">
@@ -209,7 +211,7 @@
 // --- CORE ERP DATABASE ENDPOINT VARIABLES ---
 const MASTER_SHEET_ID = "1CGpO35mnhNtv4QjeVojEf-3s78gYllV-dZb6HnHSnS4";
 // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL DEPLOYMENT LINK HERE:
-const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwywUQjvRsNTGUoOaKiXQR0A5QpEzhHXXbbZ6RXLASySjPakPsm2VxDA61vQsiDLTOz9g/exec";
+const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby705eXum08yMMX4a3T2bOp8muLuBNK_mC-cNe0yFO85CstZ_LBG1X6QbWpcIKtkH6h9g/exec";
 
 const CLIENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=0&tqx=responseHandler:handleClientsResponse`;
 const COMPONENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=657996699&tqx=responseHandler:handleComponentsResponse`;
@@ -218,6 +220,7 @@ let clientsDB = [];
 let componentsDB = [];
 let historicalLedger = [];
 let viewOnlyMode = false;
+let savedState = null; // Caches active data rows when opening historical cards
 
 function loadExternalData() {
     document.getElementById('uiDate').value = new Date().toISOString().slice(0,10);
@@ -237,7 +240,6 @@ function parseGoogleJson(table, type) {
         let obj = {};
         row.c.forEach((cell, i) => { if(headers[i]) obj[headers[i]] = cell && cell.v !== null ? cell.v.toString().trim() : ''; });
         
-        // Dynamic structural position mapping configuration fallbacks
         if(type === 'CLIENT') {
             if(row.c[0] && !obj.id) obj.id = row.c[0].v;
             if(row.c[1] && !obj.CompanyName) obj.CompanyName = row.c[1].v;
@@ -257,25 +259,43 @@ function parseGoogleJson(table, type) {
 }
 
 function fetchHistoricalLedger() {
-    if(APPS_SCRIPT_WEB_APP_URL.startsWith("http")) {
-        fetch(APPS_SCRIPT_WEB_APP_URL)
-        .then(res => res.json())
-        .then(data => {
-            historicalLedger = data;
-            generateSequentialInvoiceNumber();
-            populateHistoryViewer();
-        }).catch(e => console.log("Ledger fetch offline/restricted state.", e));
+    if (APPS_SCRIPT_WEB_APP_URL.startsWith("http")) {
+        // We bypass the strict browser fetch-CORS wall entirely by injecting a dynamic script tag!
+        const scriptLedger = document.createElement('script');
+        
+        // Append a callback identifier parameter to the URL
+        scriptLedger.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleLedgerJsonpResponse`;
+        
+        // Handle unexpected network dropouts elegantly
+        scriptLedger.onerror = function() {
+            console.log("Ledger connection path unreachable. Operating in offline standalone state.");
+        };
+        
+        document.body.appendChild(scriptLedger);
     }
 }
 
+// Global Callback receiver mapped explicitly to handle incoming JSONP data blocks cleanly
+window.handleLedgerJsonpResponse = function(data) {
+    if (data && Array.isArray(data)) {
+        historicalLedger = data;
+        console.log("Successfully retrieved cloud ledger files. Row count: " + historicalLedger.length);
+        
+        // Execute UI generation now that data is safely loaded past browser gates
+        generateSequentialInvoiceNumber();
+        populateHistoryViewer();
+    }
+};
+
 function generateSequentialInvoiceNumber() {
-    if(historicalLedger.length === 0) return;
+    if(historicalLedger.length === 0 || viewOnlyMode) return;
     
-    // Extract numerical sequence patterns out of past invoice numbers (e.g., matching ICPE/003 )
     let maxNum = 0;
     historicalLedger.forEach(row => {
-        if(row.InvoiceNo) {
-            let matches = row.InvoiceNo.match(/\d+/);
+        // Look dynamically across incoming keys cleanly lowered by script
+        let invField = row.invoiceno || row.InvoiceNo;
+        if(invField) {
+            let matches = invField.toString().match(/\d+/);
             if(matches) {
                 let num = parseInt(matches[0]);
                 if(num > maxNum) maxNum = num;
@@ -344,11 +364,24 @@ function mapRowItem(rId) {
 }
 
 function render() {
-    // Collect Metadata
-    document.getElementById('lblCopy').innerText = document.getElementById('uiCopy').value;
-    document.getElementById('lblInvNo').innerText = document.getElementById('uiInvNo').value;
-    document.getElementById('lblJobCard').innerText = document.getElementById('uiJobCard').value;
-    document.getElementById('lblDate').innerText = document.getElementById('uiDate').value;
+    let invNo, date, jobCard, copyType;
+
+    if (viewOnlyMode && savedState) {
+        invNo = savedState.invoiceNo;
+        date = savedState.date;
+        jobCard = savedState.jobCard;
+        copyType = document.getElementById('uiCopy').value; 
+    } else {
+        invNo = document.getElementById('uiInvNo').value;
+        date = document.getElementById('uiDate').value;
+        jobCard = document.getElementById('uiJobCard').value.trim();
+        copyType = document.getElementById('uiCopy').value;
+    }
+
+    document.getElementById('lblCopy').innerText = copyType;
+    document.getElementById('lblInvNo').innerText = invNo;
+    document.getElementById('lblJobCard').innerText = jobCard === "" ? "No JC" : jobCard;
+    document.getElementById('lblDate').innerText = date;
 
     const rows = document.querySelectorAll('#itemRows tr');
     const printTbody = document.getElementById('printItemRows');
@@ -357,31 +390,45 @@ function render() {
     let subtotal = 0, cgst = 0, sgst = 0, tds = 0;
 
     rows.forEach(row => {
-        let name = "";
-        let hsn = "998898";
+        let name = "", hsn = "998898";
+        let qty = 0, price = 0, lineTotal = 0, rowGstAmount = 0, rowTdsAmount = 0;
         
-        if(viewOnlyMode) {
+        if (viewOnlyMode) {
+            // READ THE PRE-CALCULATED DATA PRECISELY CAPTURED FROM LEDGER COLUMNS
             name = row.dataset.desc;
             hsn = row.dataset.hsn;
+            qty = parseFloat(row.querySelector('.row-qty').innerText) || 0;
+            price = parseFloat(row.querySelector('.row-price').innerText) || 0;
+            
+            lineTotal = qty * price;
+            subtotal += lineTotal;
+            
+            // Extract pre-calculated absolute tax amounts instead of computing rates
+            rowGstAmount = parseFloat(row.dataset.gstamount) || 0;
+            rowTdsAmount = parseFloat(row.dataset.tdsamount) || 0;
+            
+            cgst += (rowGstAmount / 2);
+            sgst += (rowGstAmount / 2);
+            tds += rowTdsAmount;
         } else {
+            // Live Interactive Calculations for New Invoices
             const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
             name = comp ? comp.Description : 'Custom Item';
             hsn = comp ? comp.HSN : '998898';
-        }
-        
-        const qty = parseFloat(row.querySelector('.row-qty').value || row.querySelector('.row-qty').innerText) || 0;
-        const price = parseFloat(row.querySelector('.row-price').value || row.querySelector('.row-price').innerText) || 0;
-        const gstRate = parseFloat(row.querySelector('.row-gst').value || row.querySelector('.row-gst').innerText) || 0;
-        const tdsRate = parseFloat(row.querySelector('.row-tds').value || row.querySelector('.row-tds').innerText) || 0;
+            qty = parseFloat(row.querySelector('.row-qty').value) || 0;
+            price = parseFloat(row.querySelector('.row-price').value) || 0;
+            let gstRate = parseFloat(row.querySelector('.row-gst').value) || 18;
+            let tdsRate = parseFloat(row.querySelector('.row-tds').value) || 2;
 
-        let total = qty * price;
-        subtotal += total;
-        cgst += total * ((gstRate / 2) / 100);
-        sgst += total * ((gstRate / 2) / 100);
-        tds += total * (tdsRate / 100);
+            lineTotal = qty * price;
+            subtotal += lineTotal;
+            cgst += lineTotal * ((gstRate / 2) / 100);
+            sgst += lineTotal * ((gstRate / 2) / 100);
+            tds += lineTotal * (tdsRate / 100);
+        }
 
         let tr = document.createElement('tr');
-        tr.innerHTML = `<td>${name}</td><td>${hsn}</td><td class="text-right">${qty}</td><td class="text-right">${price.toFixed(2)}</td><td class="text-right">${total.toFixed(2)}</td>`;
+        tr.innerHTML = `<td>${name}</td><td>${hsn}</td><td class="text-right">${qty}</td><td class="text-right">${price.toFixed(2)}</td><td class="text-right">${lineTotal.toFixed(2)}</td>`;
         printTbody.appendChild(tr);
     });
 
@@ -402,10 +449,14 @@ function commitToCloudLedger() {
     
     const invNo = document.getElementById('uiInvNo').value.trim();
     const date = document.getElementById('uiDate').value;
+    const jobCard = document.getElementById('uiJobCard').value.trim();
     const clientName = document.getElementById('lblClientName').innerText;
 
-    // Direct Pre-commit Validation: Confirm index uniqueness array patterns
-    const duplicate = historicalLedger.some(row => row.InvoiceNo.toString().toLowerCase() === invNo.toLowerCase());
+    const duplicate = historicalLedger.some(row => {
+        let f = row.invoiceno || row.InvoiceNo;
+        return f && f.toString().toLowerCase() === invNo.toLowerCase();
+    });
+    
     if(duplicate) {
         alert(`Data Entry Error: Invoice Reference ${invNo} already logged inside Drive database Ledger!`);
         return;
@@ -416,27 +467,30 @@ function commitToCloudLedger() {
         const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
         const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
         const price = parseFloat(row.querySelector('.row-price').value) || 0;
+        const lineGst = parseFloat(row.querySelector('.row-gst').value) || 18;
+        const lineTds = parseFloat(row.querySelector('.row-tds').value) || 2;
         const lineVal = qty * price;
         
         itemsPayload.push({
             desc: comp ? comp.Description : 'SMT/SMD Jobwork',
             qty: qty,
             price: price,
-            gst: (lineVal * 0.18).toFixed(2),
-            tds: (lineVal * 0.02).toFixed(2)
+            gst: lineGst,
+            tds: lineTds
         });
     });
 
-    const payload = { invoiceNo: invNo, date: date, clientName: clientName, items: itemsPayload };
+    // Send the structured data rows directly into Google Sheets
+    const payload = { invoiceNo: invNo, date: date, clientName: clientName, jobCard: jobCard, items: itemsPayload };
 
     fetch(APPS_SCRIPT_WEB_APP_URL, {
         method: 'POST',
-        mode: 'no-cors', // Bypasses browser cross-origin preflight locks safely
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     }).then(() => {
         alert("Transaction posted successfully!");
-        location.reload(); // Hard reboots app context resetting arrays
+        location.reload();
     }).catch(e => alert("Network transmission fault recorded: " + e));
 }
 
@@ -444,21 +498,29 @@ function populateHistoryViewer() {
     const container = document.getElementById('historyList');
     container.innerHTML = "";
     
-    // Group records by Invoice unique array index bounds keys
     let uniqueInvoices = {};
     historicalLedger.forEach(row => {
-        if(!uniqueInvoices[row.InvoiceNo]) {
-            uniqueInvoices[row.InvoiceNo] = { invoiceNo: row.InvoiceNo, date: row.Date, client: row.ClientName, items: [] };
+        let iNo = row.invoiceno || row.InvoiceNo;
+        let iDt = row.date || row.Date;
+        let iCl = row.clientname || row.ClientName;
+        let iJc = row.jobcard || row.JobCard || '';
+        
+        if(!iNo) return;
+        
+        if(!uniqueInvoices[iNo]) {
+            uniqueInvoices[iNo] = { invoiceNo: iNo, date: iDt, client: iCl, jobCard: iJc, items: [] };
         }
-        uniqueInvoices[row.InvoiceNo].items.push(row);
+        uniqueInvoices[iNo].items.push(row);
     });
 
-    Object.values(uniqueInvoices).forEach(inv => {
+    Object.values(uniqueInvoices).sort((a,b) => b.invoiceNo.localeCompare(a.invoiceNo)).forEach(inv => {
         let div = document.createElement('div');
         div.className = "history-item";
+        let displayDate = inv.date ? inv.date.slice(0,10) : '-';
+        let displayJC = inv.jobCard.trim() === "" ? "No JC" : inv.jobCard;
         div.innerHTML = `
             <div>
-                <strong>${inv.invoiceNo}</strong> | <span style="font-size:12px;color:#64748b;">${inv.date.slice(0,10)}</span><br>
+                <strong>${inv.invoiceNo}</strong> | <span style="font-size:12px;color:#64748b;">${displayDate}</span> | <small style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">JC: ${displayJC}</small><br>
                 <small>${inv.client}</small>
             </div>
             <button class="btn btn-alt" style="padding:6px 12px; font-size:12px;" onclick="viewClosedInvoice('${inv.invoiceNo}')">👁️ View Document</button>
@@ -469,62 +531,77 @@ function populateHistoryViewer() {
 
 function viewClosedInvoice(invNo) {
     viewOnlyMode = true;
-    switchTab('CREATE'); // Switch view framing to template preview window
-    document.getElementById('panelCreate').querySelector('h3').innerText = "📋 Audit Document View Mode";
     
-    // Hide administrative creation buttons
-    document.querySelector('.btn-success').style.display = "none";
-    document.querySelector('.btn-alt').style.display = "none";
+    let uniqueInvoices = {};
+    historicalLedger.forEach(row => {
+        let iNo = row.invoiceno || row.InvoiceNo;
+        let iDt = row.date || row.Date;
+        let iCl = row.clientname || row.ClientName;
+        let iJc = row.jobcard || row.JobCard || '';
+        if(iNo) {
+            if(!uniqueInvoices[iNo]) uniqueInvoices[iNo] = { invoiceNo: iNo, date: iDt.slice(0,10), clientName: iCl, jobCard: iJc, rows: [] };
+            uniqueInvoices[iNo].rows.push(row);
+        }
+    });
 
-    // Filter all ledger records matching this invoice number
-    let matchingRows = historicalLedger.filter(row => row.InvoiceNo === invNo);
-    if (matchingRows.length === 0) return;
+    let selectedInv = uniqueInvoices[invNo];
+    if(!selectedInv) return;
 
-    let target = matchingRows[0];
+    // Cache the closed data values directly in a tracking object to decouple them from the input fields
+    savedState = {
+        invoiceNo: selectedInv.invoiceNo,
+        date: selectedInv.date,
+        jobCard: selectedInv.jobCard
+    };
+
+    switchTab('CREATE');
+    document.getElementById('btnExitView').style.display = "block";
+    document.getElementById('panelHeader').innerText = `📋 Viewing Historical Record: ${invNo}`;
     
-    // 1. Map basic data directly from the ledger row
-    // Support both lowercase/uppercase variations safely
-    const recordedClientName = target.ClientName || target.clientName || '';
-    document.getElementById('lblInvNo').innerText = target.InvoiceNo || target.invoiceNo || invNo;
-    document.getElementById('lblDate').innerText = target.Date ? target.Date.slice(0,10) : (target.date ? target.date.slice(0,10) : '-');
-    document.getElementById('lblClientName').innerText = recordedClientName;
+    document.getElementById('btnPostCloud').style.display = "none";
+    document.getElementById('btnAddLine').style.display = "none";
 
-    // 2. CRITICAL CROSS-REFERENCE: Use the recorded ClientName to find full profile details in clientsDB
+    document.getElementById('lblClientName').innerText = selectedInv.clientName;
+    
+    // Cross-reference client database to pull full address details
     const clientProfile = clientsDB.find(c => {
         let nameInDB = c.CompanyName || c.Company || c.name || c.B || '';
-        return nameInDB.trim().toLowerCase() === recordedClientName.trim().toLowerCase();
+        return nameInDB.trim().toLowerCase() === selectedInv.clientName.trim().toLowerCase();
     });
 
     if (clientProfile) {
-        // If profile is found in your master database, auto-fill the metadata blocks smoothly
         document.getElementById('lblClientAddr').innerText = clientProfile.Address || clientProfile.address || clientProfile.C || '-';
         document.getElementById('lblClientPhone').innerText = clientProfile.Phone || clientProfile.phone || clientProfile["Phone 1 "] || clientProfile.D || '-';
         document.getElementById('lblClientGst').innerText = clientProfile.GSTIN || clientProfile.gstin || clientProfile["GST No"] || clientProfile.E || '-';
     } else {
-        // Fallback safety if the client name was typed differently in the ledger historical line
-        document.getElementById('lblClientAddr').innerText = target.Address || '-';
-        document.getElementById('lblClientPhone').innerText = target.Phone || '-';
-        document.getElementById('lblClientGst').innerText = target.GSTIN || '-';
+        document.getElementById('lblClientAddr').innerText = '-';
+        document.getElementById('lblClientPhone').innerText = '-';
+        document.getElementById('lblClientGst').innerText = '-';
     }
     
-    // 3. Feed historical items over to elements dynamically
+    // Render the closed line rows precisely in a read-only state using true stored amounts
     const tbody = document.getElementById('itemRows');
     tbody.innerHTML = "";
-    matchingRows.forEach(row => {
+    selectedInv.rows.forEach(row => {
         let tr = document.createElement('tr');
-        // Handle variations in object property naming from the sheet columns
-        let rowDesc = row.ComponentDescription || row.componentDescription || row.desc || 'SMT/SMD Jobwork';
-        let rowQty = row.Qty || row.qty || 0;
-        let rowPrice = row.UnitPrice || row.unitPrice || row.price || 0;
-        
-        tr.dataset.desc = rowDesc;
+        let rDesc = row.componentdescription || row.desc || '';
+        let rQty = row.qty || 0;
+        let rPrice = row.unitprice || row.price || 0;
+        let rGstAmount = row.gstamount || 0;  // Stored GST Amount from Sheet Column H
+        let rTdsAmount = row.tdsamount || 0;  // Stored TDS Amount from Sheet Column I
+
+        // Store the absolute amounts in datasets so render() can display them directly
+        tr.dataset.desc = rDesc;
         tr.dataset.hsn = "998898";
+        tr.dataset.gstamount = rGstAmount;
+        tr.dataset.tdsamount = rTdsAmount;
+        
         tr.innerHTML = `
-            <td><strong>${rowDesc}</strong></td>
-            <td><span class="row-qty">${rowQty}</span></td>
-            <td><span class="row-price">${rowPrice}</span></td>
-            <td><span class="row-gst">18</span></td>
-            <td><span class="row-tds">2.0</span></td>
+            <td><strong>${rDesc}</strong></td>
+            <td><span class="row-qty">${rQty}</span></td>
+            <td><span class="row-price">${rPrice}</span></td>
+            <td><span class="row-gst">—</span></td>
+            <td><span class="row-tds">—</span></td>
             <td>-</td>
         `;
         tbody.appendChild(tr);
@@ -532,6 +609,22 @@ function viewClosedInvoice(invNo) {
     
     render();
 }
+
+function exitViewMode() {
+    viewOnlyMode = false;
+    savedState = null;
+    
+    document.getElementById('btnExitView').style.display = "none";
+    document.getElementById('panelHeader').innerText = "⚡ ICPE Billing Engine";
+    document.getElementById('btnPostCloud').style.display = "block";
+    document.getElementById('btnAddLine').style.display = "inline-block";
+    
+    // Clear rows and pull fresh sequence variables
+    document.getElementById('itemRows').innerHTML = "";
+    generateSequentialInvoiceNumber();
+    mapClient();
+}
+
 function switchTab(target) {
     if(target === 'CREATE') {
         document.getElementById('panelCreate').style.display = "block";
@@ -539,6 +632,8 @@ function switchTab(target) {
         document.getElementById('tabCreate').className = "tab-btn active";
         document.getElementById('tabView').className = "tab-btn";
     } else {
+        // If switching back to list viewer, clean up and exit viewOnly mode restrictions automatically
+        exitViewMode();
         document.getElementById('panelCreate').style.display = "none";
         document.getElementById('panelView').style.display = "block";
         document.getElementById('tabCreate').className = "tab-btn";
