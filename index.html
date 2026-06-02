@@ -476,34 +476,62 @@ function viewClosedInvoice(invNo) {
     document.querySelector('.btn-success').style.display = "none";
     document.querySelector('.btn-alt').style.display = "none";
 
+    // Filter all ledger records matching this invoice number
     let matchingRows = historicalLedger.filter(row => row.InvoiceNo === invNo);
-    if(matchingRows.length === 0) return;
+    if (matchingRows.length === 0) return;
 
     let target = matchingRows[0];
-    document.getElementById('lblClientName').innerText = target.ClientName;
-    document.getElementById('lblInvNo').innerText = target.InvoiceNo;
-    document.getElementById('lblDate').innerText = target.Date.slice(0,10);
     
-    // Feed historical strings over to elements
+    // 1. Map basic data directly from the ledger row
+    // Support both lowercase/uppercase variations safely
+    const recordedClientName = target.ClientName || target.clientName || '';
+    document.getElementById('lblInvNo').innerText = target.InvoiceNo || target.invoiceNo || invNo;
+    document.getElementById('lblDate').innerText = target.Date ? target.Date.slice(0,10) : (target.date ? target.date.slice(0,10) : '-');
+    document.getElementById('lblClientName').innerText = recordedClientName;
+
+    // 2. CRITICAL CROSS-REFERENCE: Use the recorded ClientName to find full profile details in clientsDB
+    const clientProfile = clientsDB.find(c => {
+        let nameInDB = c.CompanyName || c.Company || c.name || c.B || '';
+        return nameInDB.trim().toLowerCase() === recordedClientName.trim().toLowerCase();
+    });
+
+    if (clientProfile) {
+        // If profile is found in your master database, auto-fill the metadata blocks smoothly
+        document.getElementById('lblClientAddr').innerText = clientProfile.Address || clientProfile.address || clientProfile.C || '-';
+        document.getElementById('lblClientPhone').innerText = clientProfile.Phone || clientProfile.phone || clientProfile["Phone 1 "] || clientProfile.D || '-';
+        document.getElementById('lblClientGst').innerText = clientProfile.GSTIN || clientProfile.gstin || clientProfile["GST No"] || clientProfile.E || '-';
+    } else {
+        // Fallback safety if the client name was typed differently in the ledger historical line
+        document.getElementById('lblClientAddr').innerText = target.Address || '-';
+        document.getElementById('lblClientPhone').innerText = target.Phone || '-';
+        document.getElementById('lblClientGst').innerText = target.GSTIN || '-';
+    }
+    
+    // 3. Feed historical items over to elements dynamically
     const tbody = document.getElementById('itemRows');
     tbody.innerHTML = "";
     matchingRows.forEach(row => {
         let tr = document.createElement('tr');
-        tr.dataset.desc = row.ComponentDescription;
+        // Handle variations in object property naming from the sheet columns
+        let rowDesc = row.ComponentDescription || row.componentDescription || row.desc || 'SMT/SMD Jobwork';
+        let rowQty = row.Qty || row.qty || 0;
+        let rowPrice = row.UnitPrice || row.unitPrice || row.price || 0;
+        
+        tr.dataset.desc = rowDesc;
         tr.dataset.hsn = "998898";
         tr.innerHTML = `
-            <td><strong>${row.ComponentDescription}</strong></td>
-            <td><span class="row-qty">${row.Qty}</span></td>
-            <td><span class="row-price">${row.UnitPrice}</span></td>
+            <td><strong>${rowDesc}</strong></td>
+            <td><span class="row-qty">${rowQty}</span></td>
+            <td><span class="row-price">${rowPrice}</span></td>
             <td><span class="row-gst">18</span></td>
             <td><span class="row-tds">2.0</span></td>
             <td>-</td>
         `;
         tbody.appendChild(tr);
     });
+    
     render();
 }
-
 function switchTab(target) {
     if(target === 'CREATE') {
         document.getElementById('panelCreate').style.display = "block";
