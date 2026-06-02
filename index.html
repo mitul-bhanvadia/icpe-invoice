@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ICPE Invoice Engine Pro v2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
+<style>
         :root { --primary: #0f172a; --accent: #2563eb; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; margin: 0; padding: 15px; color: #334155; }
         
@@ -14,7 +14,7 @@
         h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
         label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #64748b; }
-        select, input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 16px; } /* Increased padding and font size for mobile tap targets */
+        select, input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
         
         /* Desktop Item Input Table */
         .ui-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
@@ -25,78 +25,52 @@
         .btn-danger { background: #ef4444; width: 100%; }
         .btn-success { background: #10b981; width: 100%; padding: 14px; font-size: 16px; margin-top: 15px; }
         
-        /* --- Mobile Responsive Form Factor Overhaul --- */
+        /* Mobile Form Factor Screen Adjustments */
         @media screen and (max-width: 768px) {
-            /* Hide the traditional desktop table headers on mobile */
             .ui-table thead { display: none; }
-            
-            /* Turn every item row into a standalone card container */
-            .ui-table tr { 
-                display: block; 
-                background: #f8fafc; 
-                border: 1px solid #e2e8f0; 
-                border-radius: 10px; 
-                padding: 12px; 
-                margin-bottom: 15px; 
-                position: relative;
-            }
-            
-            /* Make cells wrap smoothly and layout stacked vertically */
-            .ui-table td { 
-                display: block; 
-                width: 100% !important; 
-                box-sizing: border-box;
-                padding: 6px 0;
-            }
-
-            /* Add visual labels above inputs on mobile so you know what is what */
+            .ui-table tr { display: block; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; margin-bottom: 15px; }
+            .ui-table td { display: block; width: 100% !important; box-sizing: border-box; padding: 6px 0; }
             .ui-table td:nth-child(1)::before { content: "Component Description"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
             .ui-table td:nth-child(2)::before { content: "Quantity (Nos)"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
             .ui-table td:nth-child(3)::before { content: "Unit Price (INR)"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
             .ui-table td:nth-child(4)::before { content: "GST %"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
             .ui-table td:nth-child(5)::before { content: "TDS %"; font-size: 11px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
-        }
-
-        /* --- Strict Fixed A4 Output Constraints (Prevents Right Side Cut-Offs) --- */
-        #print-area { 
-            width: 190mm; 
-            background: white; 
-            margin: 0 auto; 
-            box-sizing: border-box; 
-            font-size: 12px; 
-            color: #000; 
-            line-height: 1.4; 
-        }
-        .inv-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; }
-        .company-title { font-size: 20px; font-weight: bold; margin: 0; }
-        .inv-type-badge { border: 1px solid #000; padding: 4px 10px; font-weight: bold; font-size: 11px; text-transform: uppercase; align-self: flex-start; }
-        
-        .meta-table, .item-table { width: 100%; border-collapse: collapse; margin-top: 12px; table-layout: fixed; }
-        .meta-table td { border: 1px solid #000; padding: 6px; vertical-align: top; width: 50%; word-break: break-all; }
-        
-        .item-table th, .item-table td { border: 1px solid #000; padding: 6px; word-wrap: break-word; }
-        .item-table th { background: #f1f5f9; text-align: left; }
-        .text-right { text-align: right; }
-        
-        .totals-section { display: flex; justify-content: space-between; margin-top: 15px; page-break-inside: avoid; }
-        .bank-details { width: 50%; font-size: 11px; border: 1px dashed #000; padding: 8px; }
-        .summary-box { width: 46%; }
-        .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
-        .grand-total { font-size: 14px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin-top: 4px; }
-        
-        .sign-block { margin-top: 35px; text-align: right; font-weight: bold; page-break-inside: avoid; }
-        
-        @media screen {
-            #print-area { box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; padding: 15mm; margin-bottom: 50px; }
-        }
-        
-        /* Desktop/Mobile handling for printable invoice template wrapper preview visibility */
-        @media screen and (max-width: 768px) {
-            #print-area { width: 100%; padding: 10px; font-size: 11px; overflow-x: auto; }
+            #print-area { width: 100%; padding: 10px; font-size: 11px; overflow-x: auto; box-shadow: none; }
             .totals-section { flex-direction: column; }
             .bank-details, .summary-box { width: 100%; margin-bottom: 15px; }
         }
-    </style>
+
+        /* --- Screen Preview Container Layout --- */
+        @media screen {
+            #print-area { max-width: 190mm; background: white; margin: 0 auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); border-radius: 8px; padding: 15mm; margin-bottom: 50px; box-sizing: border-box; }
+        }
+        #print-area { font-size: 12px; color: #000; line-height: 1.4; }
+        .inv-header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 8px; }
+        .company-title { font-size: 20px; font-weight: bold; margin: 0; }
+        .inv-type-badge { border: 1px solid #000; padding: 4px 10px; font-weight: bold; font-size: 11px; text-transform: uppercase; align-self: flex-start; }
+        .meta-table, .item-table { width: 100%; border-collapse: collapse; margin-top: 12px; table-layout: fixed; }
+        .meta-table td { border: 1px solid #000; padding: 6px; vertical-align: top; width: 50%; word-break: break-all; }
+        .item-table th, .item-table td { border: 1px solid #000; padding: 6px; word-wrap: break-word; }
+        .item-table th { background: #f1f5f9; text-align: left; }
+        .text-right { text-align: right; }
+        .totals-section { display: flex; justify-content: space-between; margin-top: 15px; page-break-inside: avoid; }
+        .bank-details { width: 50%; font-size: 11px; border: 1px dashed #000; padding: 8px; box-sizing: border-box; }
+        .summary-box { width: 46%; }
+        .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
+        .grand-total { font-size: 14px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 4px 0; margin-top: 4px; }
+        .sign-block { margin-top: 35px; text-align: right; font-weight: bold; page-break-inside: avoid; }
+
+        /* --- STRICT HARDWARE PRINT ENGINE CONSTAL (Forces pristine A4 formatting on export) --- */
+        @media print {
+            @page { size: A4 portrait; margin: 15mm 10mm 15mm 10mm; }
+            body { background: white; padding: 0; margin: 0; color: #000; }
+            .no-print { display: none !important; } /* Hides all calculator buttons & controls completely */
+            #print-area { width: 100% !important; max-width: 100% !important; padding: 0 !important; box-shadow: none !important; display: block !important; }
+            .totals-section { display: flex !important; flex-direction: row !important; justify-content: space-between !important; }
+            .bank-details { width: 50% !important; display: block !important; }
+            .summary-box { width: 46% !important; display: block !important; }
+        }
+              </style>
 </head>
 <body>
 
@@ -485,36 +459,17 @@ function numToWords(num) {
 }
 
 function exportA4PDF() {
-    const element = document.getElementById('print-area');
-    const filenameString = document.getElementById('uiInvNo').value.replace(/\//g, '_');
+    // Simply sets the page title dynamically so the device automatically saves the file with your invoice number
+    const invNum = document.getElementById('uiInvNo').value.replace(/\//g, '_');
+    const originalTitle = document.title;
     
-    // 1. Force the layout container to look exactly like a desktop view before rendering
-    const originalWidth = element.style.width;
-    const originalPadding = element.style.padding;
+    document.title = `Invoice_${invNum}`;
     
-    element.style.width = "210mm"; // Lock to true A4 width sizing layout
-    element.style.padding = "15mm"; // Restore safety borders
+    // Fires your device's native print engine. On Android/iOS, this will smoothly open the "Save as PDF" modal.
+    window.print();
     
-    const opt = {
-        margin:       [10, 5, 10, 5],// Zero out html2pdf margin to prevent shifting double margins
-        filename:     `Invoice_${filenameString}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-            scale: 2, 
-            useCORS: true, 
-            logging: false,
-            width: 794, // Force canvas engine to snap to exactly 210mm in pixels (at 96 DPI)
-            windowWidth: 794 // Tricks the engine into thinking it's running on a wide desktop screen
-        },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    
-    // 2. Execute the print pipeline and restore mobile layout settings right after capture finishes
-    html2pdf().from(element).set(opt).toContainer().toCanvas().toPdf().save().then(() => {
-        // Reset styles back so the live preview on your phone screen looks normal again
-        element.style.width = originalWidth;
-        element.style.padding = originalPadding;
-    });
+    // Reset page title back to application default right after print close execution
+    document.title = originalTitle;
 }
 
 window.onload = loadExternalData;
