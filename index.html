@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICPE ERP Engine v3.1</title>
+    <title>ICPE ERP Engine v3.3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; }
@@ -122,8 +122,7 @@
 
     <div id="panelView" style="display:none;">
         <h3>📜 Closed Ledger Audit Records</h3>
-        <div id="historyList" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">
-            </div>
+        <div id="historyList" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
         <p style="font-size:12px; color:#64748b; font-style:italic;">* Viewing historical mode disables row adjustments to preserve data compliance integrity.</p>
     </div>
 </div>
@@ -210,7 +209,6 @@
 <script>
 // --- CORE ERP DATABASE ENDPOINT VARIABLES ---
 const MASTER_SHEET_ID = "1CGpO35mnhNtv4QjeVojEf-3s78gYllV-dZb6HnHSnS4";
-// PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL DEPLOYMENT LINK HERE:
 const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby705eXum08yMMX4a3T2bOp8muLuBNK_mC-cNe0yFO85CstZ_LBG1X6QbWpcIKtkH6h9g/exec";
 
 const CLIENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=0&tqx=responseHandler:handleClientsResponse`;
@@ -220,19 +218,38 @@ let clientsDB = [];
 let componentsDB = [];
 let historicalLedger = [];
 let viewOnlyMode = false;
-let savedState = null; // Caches active data rows when opening historical cards
+let savedState = null;
+
+// Clean offline local data arrays to display if network is completely down
+const localClientsFallback = [{id:"zeck", CompanyName:"ZECK PRIVATE LIMITED", Address:"3rd Floor, 13 Landmark, Gotri Road, Sevasi, Vadodara - 391101", Phone:"+91 - 75749 88882", GSTIN:"24AAACZ9258L1ZQ"}];
+const localItemsFallback = [
+    {id:"rgb8_216", Description:"RGB_8_T_4M_v.26(216P) - SMT Jobwork", HSN:"998898", BasePrice:25.92, DefaultGST:18, DefaultTDS:2},
+    {id:"ztcw_v8", Description:"ZTCW_TCH4_V8 – SMD Job work", HSN:"998898", BasePrice:15.24, DefaultGST:12, DefaultTDS:2}
+];
+
+let clientsLoaded = false;
+let componentsLoaded = false;
 
 function loadExternalData() {
     document.getElementById('uiDate').value = new Date().toISOString().slice(0,10);
-    
     const sClient = document.createElement('script'); sClient.src = CLIENTS_API_URL; document.body.appendChild(sClient);
     const sComp = document.createElement('script'); sComp.src = COMPONENTS_API_URL; document.body.appendChild(sComp);
     
+    // Safety check timeout: If Google doesn't respond in 4 seconds, deploy fallbacks
+    setTimeout(() => {
+        if (!clientsLoaded || !componentsLoaded) {
+            console.log("Network timeout or parsing mismatch. Deploying default offline arrays.");
+            if (!clientsLoaded) { clientsDB = localClientsFallback; clientsLoaded = true; }
+            if (!componentsLoaded) { componentsDB = localItemsFallback; componentsLoaded = true; }
+            initClientUI();
+        }
+    }, 4000);
+
     fetchHistoricalLedger();
 }
 
-window.handleClientsResponse = function(r) { if(r&&r.table){ clientsDB = parseGoogleJson(r.table, 'CLIENT'); initClientUI(); } };
-window.handleComponentsResponse = function(r) { if(r&&r.table){ componentsDB = parseGoogleJson(r.table, 'COMP'); render(); } };
+window.handleClientsResponse = function(r) { if(r&&r.table){ clientsDB = parseGoogleJson(r.table, 'CLIENT'); clientsLoaded = true; initClientUI(); } };
+window.handleComponentsResponse = function(r) { if(r&&r.table){ componentsDB = parseGoogleJson(r.table, 'COMP'); componentsLoaded = true; render(); } };
 
 function parseGoogleJson(table, type) {
     const headers = table.cols.map(col => col.label ? col.label.trim() : '');
@@ -260,28 +277,18 @@ function parseGoogleJson(table, type) {
 
 function fetchHistoricalLedger() {
     if (APPS_SCRIPT_WEB_APP_URL.startsWith("http")) {
-        // We bypass the strict browser fetch-CORS wall entirely by injecting a dynamic script tag!
         const scriptLedger = document.createElement('script');
-        
-        // Append a callback identifier parameter to the URL
         scriptLedger.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleLedgerJsonpResponse`;
-        
-        // Handle unexpected network dropouts elegantly
         scriptLedger.onerror = function() {
-            console.log("Ledger connection path unreachable. Operating in offline standalone state.");
+            console.log("Ledger connection path unreachable.");
         };
-        
         document.body.appendChild(scriptLedger);
     }
 }
 
-// Global Callback receiver mapped explicitly to handle incoming JSONP data blocks cleanly
 window.handleLedgerJsonpResponse = function(data) {
     if (data && Array.isArray(data)) {
         historicalLedger = data;
-        console.log("Successfully retrieved cloud ledger files. Row count: " + historicalLedger.length);
-        
-        // Execute UI generation now that data is safely loaded past browser gates
         generateSequentialInvoiceNumber();
         populateHistoryViewer();
     }
@@ -289,10 +296,8 @@ window.handleLedgerJsonpResponse = function(data) {
 
 function generateSequentialInvoiceNumber() {
     if(historicalLedger.length === 0 || viewOnlyMode) return;
-    
     let maxNum = 0;
     historicalLedger.forEach(row => {
-        // Look dynamically across incoming keys cleanly lowered by script
         let invField = row.invoiceno || row.InvoiceNo;
         if(invField) {
             let matches = invField.toString().match(/\d+/);
@@ -302,7 +307,6 @@ function generateSequentialInvoiceNumber() {
             }
         }
     });
-    
     let nextNumString = (maxNum + 1).toString().padStart(3, '0');
     document.getElementById('uiInvNo').value = `ICPE/${nextNumString}`;
     render();
@@ -310,7 +314,11 @@ function generateSequentialInvoiceNumber() {
 
 function initClientUI() {
     const s = document.getElementById('uiClient'); s.innerHTML = "";
-    clientsDB.forEach(c => s.add(new Option(c.CompanyName || c.id, c.id)));
+    if(clientsDB.length === 0) {
+        s.add(new Option("No clients found", ""));
+    } else {
+        clientsDB.forEach(c => s.add(new Option(c.CompanyName || c.id, c.id)));
+    }
     mapClient();
     addNewRow();
 }
@@ -378,17 +386,68 @@ function render() {
         copyType = document.getElementById('uiCopy').value;
     }
 
-    // Assign text to document print layout bounding parameters
     document.getElementById('lblCopy').innerText = copyType;
     document.getElementById('lblInvNo').innerText = invNo;
     document.getElementById('lblJobCard').innerText = jobCard === "" ? "No JC" : jobCard;
-    
-    // --- UPDATED DATE DISPLAY LINE ---
-    // Converts the raw input string to standard Indian DD-MM-YYYY format for the print layout
     document.getElementById('lblDate').innerText = formatToDDMMYYYY(date);
 
     const rows = document.querySelectorAll('#itemRows tr');
-    // ... remainder of your render() function remains exactly the same ...
+    const printTbody = document.getElementById('printItemRows');
+    printTbody.innerHTML = "";
+
+    let subtotal = 0, cgst = 0, sgst = 0, tds = 0;
+
+    rows.forEach(row => {
+        let name = "", hsn = "998898";
+        let qty = 0, price = 0, lineTotal = 0, rowGstAmount = 0, rowTdsAmount = 0;
+        
+        if (viewOnlyMode) {
+            name = row.dataset.desc;
+            hsn = row.dataset.hsn;
+            qty = parseFloat(row.querySelector('.row-qty').innerText) || 0;
+            price = parseFloat(row.querySelector('.row-price').innerText) || 0;
+            
+            lineTotal = qty * price;
+            subtotal += lineTotal;
+            
+            rowGstAmount = parseFloat(row.dataset.gstamount) || 0;
+            rowTdsAmount = parseFloat(row.dataset.tdsamount) || 0;
+            
+            cgst += (rowGstAmount / 2);
+            sgst += (rowGstAmount / 2);
+            tds += rowTdsAmount;
+        } else {
+            const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
+            name = comp ? comp.Description : 'Custom Item';
+            hsn = comp ? comp.HSN : '998898';
+            qty = parseFloat(row.querySelector('.row-qty').value) || 0;
+            price = parseFloat(row.querySelector('.row-price').value) || 0;
+            let gstRate = parseFloat(row.querySelector('.row-gst').value) || 18;
+            let tdsRate = parseFloat(row.querySelector('.row-tds').value) || 2;
+
+            lineTotal = qty * price;
+            subtotal += lineTotal;
+            cgst += lineTotal * ((gstRate / 2) / 100);
+            sgst += lineTotal * ((gstRate / 2) / 100);
+            tds += lineTotal * (tdsRate / 100);
+        }
+
+        let tr = document.createElement('tr');
+        tr.innerHTML = `<td>${name}</td><td>${hsn}</td><td class="text-right">${qty}</td><td class="text-right">${price.toFixed(2)}</td><td class="text-right">${lineTotal.toFixed(2)}</td>`;
+        printTbody.appendChild(tr);
+    });
+
+    let grandTotal = subtotal + cgst + sgst;
+    let netPayable = Math.round(grandTotal - tds);
+
+    document.getElementById('valSub').innerText = subtotal.toFixed(2);
+    document.getElementById('valCgst').innerText = cgst.toFixed(2);
+    document.getElementById('valSgst').innerText = sgst.toFixed(2);
+    document.getElementById('valTotal').innerText = grandTotal.toFixed(2);
+    document.getElementById('valTds').innerText = `-${tds.toFixed(2)}`;
+    document.getElementById('valPayable').innerText = netPayable.toFixed(2);
+    document.getElementById('valWords').innerText = numToWords(netPayable) + " Only";
+}
 
 function commitToCloudLedger() {
     if(!APPS_SCRIPT_WEB_APP_URL.startsWith("http")) { alert("Please hook up deployment script endpoint first."); return; }
@@ -415,7 +474,6 @@ function commitToCloudLedger() {
         const price = parseFloat(row.querySelector('.row-price').value) || 0;
         const lineGst = parseFloat(row.querySelector('.row-gst').value) || 18;
         const lineTds = parseFloat(row.querySelector('.row-tds').value) || 2;
-        const lineVal = qty * price;
         
         itemsPayload.push({
             desc: comp ? comp.Description : 'SMT/SMD Jobwork',
@@ -426,7 +484,6 @@ function commitToCloudLedger() {
         });
     });
 
-    // Send the structured data rows directly into Google Sheets
     const payload = { invoiceNo: invNo, date: date, clientName: clientName, jobCard: jobCard, items: itemsPayload };
 
     fetch(APPS_SCRIPT_WEB_APP_URL, {
@@ -450,7 +507,6 @@ function populateHistoryViewer() {
         let iDt = row.date || row.Date;
         let iCl = row.clientname || row.ClientName;
         let iJc = row.jobcard || row.JobCard || '';
-        
         if(!iNo) return;
         
         if(!uniqueInvoices[iNo]) {
@@ -462,8 +518,8 @@ function populateHistoryViewer() {
     Object.values(uniqueInvoices).sort((a,b) => b.invoiceNo.localeCompare(a.invoiceNo)).forEach(inv => {
         let div = document.createElement('div');
         div.className = "history-item";
-        let displayDate = inv.date ? inv.date.slice(0,10) : '-';
-        let displayJC = inv.jobCard.trim() === "" ? "No JC" : inv.jobCard;
+        let displayDate = formatToDDMMYYYY(inv.date);
+        let displayJC = inv.jobCard.toString().trim() === "" ? "No JC" : inv.jobCard;
         div.innerHTML = `
             <div>
                 <strong>${inv.invoiceNo}</strong> | <span style="font-size:12px;color:#64748b;">${displayDate}</span> | <small style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">JC: ${displayJC}</small><br>
@@ -485,7 +541,7 @@ function viewClosedInvoice(invNo) {
         let iCl = row.clientname || row.ClientName;
         let iJc = row.jobcard || row.JobCard || '';
         if(iNo) {
-            if(!uniqueInvoices[iNo]) uniqueInvoices[iNo] = { invoiceNo: iNo, date: iDt.slice(0,10), clientName: iCl, jobCard: iJc, rows: [] };
+            if(!uniqueInvoices[iNo]) uniqueInvoices[iNo] = { invoiceNo: iNo, date: iDt, clientName: iCl, jobCard: iJc, rows: [] };
             uniqueInvoices[iNo].rows.push(row);
         }
     });
@@ -493,7 +549,6 @@ function viewClosedInvoice(invNo) {
     let selectedInv = uniqueInvoices[invNo];
     if(!selectedInv) return;
 
-    // Cache the closed data values directly in a tracking object to decouple them from the input fields
     savedState = {
         invoiceNo: selectedInv.invoiceNo,
         date: selectedInv.date,
@@ -506,10 +561,8 @@ function viewClosedInvoice(invNo) {
     
     document.getElementById('btnPostCloud').style.display = "none";
     document.getElementById('btnAddLine').style.display = "none";
-
     document.getElementById('lblClientName').innerText = selectedInv.clientName;
     
-    // Cross-reference client database to pull full address details
     const clientProfile = clientsDB.find(c => {
         let nameInDB = c.CompanyName || c.Company || c.name || c.B || '';
         return nameInDB.trim().toLowerCase() === selectedInv.clientName.trim().toLowerCase();
@@ -525,18 +578,16 @@ function viewClosedInvoice(invNo) {
         document.getElementById('lblClientGst').innerText = '-';
     }
     
-    // Render the closed line rows precisely in a read-only state using true stored amounts
     const tbody = document.getElementById('itemRows');
     tbody.innerHTML = "";
     selectedInv.rows.forEach(row => {
         let tr = document.createElement('tr');
-        let rDesc = row.componentdescription || row.desc || '';
+        let rDesc = row.componentdescription || row.ComponentDescription || row.desc || '';
         let rQty = row.qty || 0;
-        let rPrice = row.unitprice || row.price || 0;
-        let rGstAmount = row.gstamount || 0;  // Stored GST Amount from Sheet Column H
-        let rTdsAmount = row.tdsamount || 0;  // Stored TDS Amount from Sheet Column I
+        let rPrice = row.unitprice || row.UnitPrice || row.price || 0;
+        let rGstAmount = row.gstamount || 0;
+        let rTdsAmount = row.tdsamount || 0;
 
-        // Store the absolute amounts in datasets so render() can display them directly
         tr.dataset.desc = rDesc;
         tr.dataset.hsn = "998898";
         tr.dataset.gstamount = rGstAmount;
@@ -559,13 +610,10 @@ function viewClosedInvoice(invNo) {
 function exitViewMode() {
     viewOnlyMode = false;
     savedState = null;
-    
     document.getElementById('btnExitView').style.display = "none";
     document.getElementById('panelHeader').innerText = "⚡ ICPE Billing Engine";
     document.getElementById('btnPostCloud').style.display = "block";
     document.getElementById('btnAddLine').style.display = "inline-block";
-    
-    // Clear rows and pull fresh sequence variables
     document.getElementById('itemRows').innerHTML = "";
     generateSequentialInvoiceNumber();
     mapClient();
@@ -578,7 +626,6 @@ function switchTab(target) {
         document.getElementById('tabCreate').className = "tab-btn active";
         document.getElementById('tabView').className = "tab-btn";
     } else {
-        // If switching back to list viewer, clean up and exit viewOnly mode restrictions automatically
         exitViewMode();
         document.getElementById('panelCreate').style.display = "none";
         document.getElementById('panelView').style.display = "block";
@@ -603,24 +650,31 @@ function numToWords(num) {
     return str.trim() ? 'Rupees ' + str : 'Zero Rupees';
 }
 
-// Helper function to convert YYYY-MM-DD to DD-MM-YYYY
 function formatToDDMMYYYY(dateString) {
     if (!dateString || dateString.trim() === "" || dateString === "-") return "-";
     
-    // Google Sheets timestamps sometimes return full ISO dates (e.g., 2026-06-03T00:00:00.000Z)
-    // We split by 'T' and take the first part to isolate just the YYYY-MM-DD section
-    const cleanDate = dateString.split('T')[0];
-    const parts = cleanDate.split('-');
+    let cleanDate = dateString.split('T')[0].trim();
     
-    if (parts.length !== 3) return dateString; // Fallback security if string is already formatted
+    if (cleanDate.includes('/')) {
+        let parts = cleanDate.split('/');
+        if (parts.length === 3) {
+            if (parts[0].length === 4) {
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+            return parts.join('-');
+        }
+    }
     
-    const year = parts[0];
-    const month = parts[1];
-    const day = parts[2];
-    
-    return `${day}-${month}-${year}`;
+    let parts = cleanDate.split('-');
+    if (parts.length === 3) {
+        if (parts[0].length === 4) {
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return parts.join('-');
+    }
+    return dateString;
 }
-    
+
 function exportDesktopPDF() { window.print(); }
 
 window.onload = loadExternalData;
