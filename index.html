@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICPE ERP Engine v3.3</title>
+    <title>ICPE ERP Engine Pro v4.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; }
@@ -17,11 +17,16 @@
         select, input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         
         /* Tab Controls */
-        .tab-box { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-box { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         .tab-box .btn-view-mode { background: #f59e0b; color: white; display: none; margin-left: auto; }
         .tab-btn { background: #e2e8f0; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 6px; color: #475569; }
         .tab-btn.active { background: var(--accent); color: white; }
         
+        /* FY Tab Sorters */
+        .fy-container { display: flex; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 8px; margin-bottom: 15px; }
+        .fy-btn { background: white; border: 1px solid #cbd5e1; padding: 6px 12px; font-size: 13px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #64748b; }
+        .fy-btn.active { background: #475569; color: white; border-color: #475569; }
+
         .ui-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .ui-table th { background: #f8fafc; text-align: left; padding: 10px; font-size: 13px; color: #64748b; }
         .ui-table td { padding: 8px 4px; }
@@ -33,6 +38,10 @@
         
         /* Viewer List Format */
         .history-item { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+
+        /* Security Gate Shield Overlay */
+        #gatekeeper-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:99999; display:flex; justify-content:center; align-items:center; color:white; }
+        .gate-card { background:white; color:#334155; padding:30px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); width:320px; text-align:center; }
 
         /* --- Strict Fixed A4 Output Constraints --- */
         #print-area { width: 190mm; background: white; margin: 0 auto; box-sizing: border-box; font-size: 12px; color: #000; line-height: 1.4; }
@@ -63,7 +72,17 @@
 </head>
 <body>
 
-<div class="no-print">
+<div id="gatekeeper-screen">
+    <div class="gate-card">
+        <h2 style="margin-top:0; color:#0f172a;">🔐 ICPE Protected Gate</h2>
+        <p style="font-size:13px; color:#64748b;">Please supply authentic gate access key credentials to release database modules.</p>
+        <input type="password" id="gateKey" placeholder="Enter System Password" style="margin-bottom:15px; padding:12px; text-align:center;">
+        <button class="btn" style="width:100%; padding:12px;" onclick="verifyGateSecurity()">Unlock Terminal</button>
+        <p id="gateErr" style="color:#ef4444; font-size:12px; font-weight:bold; margin-top:10px; display:none;">Invalid access code credential.</p>
+    </div>
+</div>
+
+<div class="no-print" id="mainAppLayout" style="display:none;">
     <div class="tab-box">
         <button class="tab-btn active" id="tabCreate" onclick="switchTab('CREATE')">＋ Create New Invoice</button>
         <button class="tab-btn" id="tabView" onclick="switchTab('VIEW')">🔍 Historical Records Viewer</button>
@@ -79,7 +98,7 @@
             </div>
             <div>
                 <label>Invoice Date</label>
-                <input type="date" id="uiDate" onchange="render()">
+                <input type="date" id="uiDate" onchange="onDateSelectionChange()">
             </div>
             <div>
                 <label>Invoice Number</label>
@@ -122,12 +141,17 @@
 
     <div id="panelView" style="display:none;">
         <h3>📜 Closed Ledger Audit Records</h3>
-        <div id="historyList" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
+        
+        <label>Filter by Financial Cycle Segment:</label>
+        <div class="fy-container" id="fyTabWrapper">
+            </div>
+
+        <div id="historyList" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px;"></div>
         <p style="font-size:12px; color:#64748b; font-style:italic;">* Viewing historical mode disables row adjustments to preserve data compliance integrity.</p>
     </div>
 </div>
 
-<div id="print-area">
+<div id="print-area" style="display:none;">
     <div class="inv-header">
         <div>
             <div class="company-title">Inficharge Power Electronics</div>
@@ -143,7 +167,7 @@
     <table class="meta-table">
         <tr>
             <td>
-                <strong>To (Client Details):</strong><br>
+                <strong>To:</strong><br>
                 <span id="lblClientName" style="font-weight:bold;">-</span><br>
                 Address: <span id="lblClientAddr">-</span><br>
                 Phone: <span id="lblClientPhone">-</span><br>
@@ -153,7 +177,7 @@
                 <strong>Invoice Metadata:</strong><br>
                 Invoice No: <span id="lblInvNo" style="font-weight:bold;">-</span><br>
                 Date: <span id="lblDate">-</span><br>
-                Challan/Job Card Reference: <span id="lblJobCard">-</span>
+                Challan/Job Card: <span id="lblJobCard">-</span>
             </td>
         </tr>
     </table>
@@ -209,7 +233,7 @@
 <script>
 // --- CORE ERP DATABASE ENDPOINT VARIABLES ---
 const MASTER_SHEET_ID = "1CGpO35mnhNtv4QjeVojEf-3s78gYllV-dZb6HnHSnS4";
-const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby705eXum08yMMX4a3T2bOp8muLuBNK_mC-cNe0yFO85CstZ_LBG1X6QbWpcIKtkH6h9g/exec";
+const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxdUkOy0Z5KnPlhBWUqEGIVjjIDz5vqWRlzIQGRgpCZx_WUD6G7aNK60m1fZZejUVl3lQ/exec";
 
 const CLIENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=0&tqx=responseHandler:handleClientsResponse`;
 const COMPONENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=657996699&tqx=responseHandler:handleComponentsResponse`;
@@ -219,44 +243,43 @@ let componentsDB = [];
 let historicalLedger = [];
 let viewOnlyMode = false;
 let savedState = null;
+let currentSelectedFY = ""; 
 
-// Clean offline local data arrays to display if network is completely down
-const localClientsFallback = [{id:"zeck", CompanyName:"ZECK PRIVATE LIMITED", Address:"3rd Floor, 13 Landmark, Gotri Road, Sevasi, Vadodara - 391101", Phone:"+91 - 75749 88882", GSTIN:"24AAACZ9258L1ZQ"}];
-const localItemsFallback = [
-    {id:"rgb8_216", Description:"RGB_8_T_4M_v.26(216P) - SMT Jobwork", HSN:"998898", BasePrice:25.92, DefaultGST:18, DefaultTDS:2},
-    {id:"ztcw_v8", Description:"ZTCW_TCH4_V8 – SMD Job work", HSN:"998898", BasePrice:15.24, DefaultGST:12, DefaultTDS:2}
-];
+// Lock gate configuration profile settings (Modify password keys here)
+const CRYPTO_GATE_KEY = "ICPE@2026";
 
-let clientsLoaded = false;
-let componentsLoaded = false;
+function verifyGateSecurity() {
+    const inputVal = document.getElementById('gateKey').value;
+    if (inputVal === CRYPTO_GATE_KEY) {
+        document.getElementById('gatekeeper-screen').style.display = "none";
+        document.getElementById('mainAppLayout').style.display = "block";
+        document.getElementById('print-area').style.display = "block";
+        loadExternalData();
+    } else {
+        document.getElementById('gateErr').style.display = "block";
+    }
+}
+
+// Bind Enter Key execution tracking to password screen input box fields
+document.getElementById('gateKey').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') verifyGateSecurity();
+});
 
 function loadExternalData() {
     document.getElementById('uiDate').value = new Date().toISOString().slice(0,10);
     const sClient = document.createElement('script'); sClient.src = CLIENTS_API_URL; document.body.appendChild(sClient);
     const sComp = document.createElement('script'); sComp.src = COMPONENTS_API_URL; document.body.appendChild(sComp);
-    
-    // Safety check timeout: If Google doesn't respond in 4 seconds, deploy fallbacks
-    setTimeout(() => {
-        if (!clientsLoaded || !componentsLoaded) {
-            console.log("Network timeout or parsing mismatch. Deploying default offline arrays.");
-            if (!clientsLoaded) { clientsDB = localClientsFallback; clientsLoaded = true; }
-            if (!componentsLoaded) { componentsDB = localItemsFallback; componentsLoaded = true; }
-            initClientUI();
-        }
-    }, 4000);
-
     fetchHistoricalLedger();
 }
 
-window.handleClientsResponse = function(r) { if(r&&r.table){ clientsDB = parseGoogleJson(r.table, 'CLIENT'); clientsLoaded = true; initClientUI(); } };
-window.handleComponentsResponse = function(r) { if(r&&r.table){ componentsDB = parseGoogleJson(r.table, 'COMP'); componentsLoaded = true; render(); } };
+window.handleClientsResponse = function(r) { if(r&&r.table){ clientsDB = parseGoogleJson(r.table, 'CLIENT'); initClientUI(); } };
+window.handleComponentsResponse = function(r) { if(r&&r.table){ componentsDB = parseGoogleJson(r.table, 'COMP'); render(); } };
 
 function parseGoogleJson(table, type) {
     const headers = table.cols.map(col => col.label ? col.label.trim() : '');
     return table.rows.map(row => {
         let obj = {};
         row.c.forEach((cell, i) => { if(headers[i]) obj[headers[i]] = cell && cell.v !== null ? cell.v.toString().trim() : ''; });
-        
         if(type === 'CLIENT') {
             if(row.c[0] && !obj.id) obj.id = row.c[0].v;
             if(row.c[1] && !obj.CompanyName) obj.CompanyName = row.c[1].v;
@@ -279,9 +302,6 @@ function fetchHistoricalLedger() {
     if (APPS_SCRIPT_WEB_APP_URL.startsWith("http")) {
         const scriptLedger = document.createElement('script');
         scriptLedger.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleLedgerJsonpResponse`;
-        scriptLedger.onerror = function() {
-            console.log("Ledger connection path unreachable.");
-        };
         document.body.appendChild(scriptLedger);
     }
 }
@@ -290,35 +310,63 @@ window.handleLedgerJsonpResponse = function(data) {
     if (data && Array.isArray(data)) {
         historicalLedger = data;
         generateSequentialInvoiceNumber();
-        populateHistoryViewer();
+        buildFinancialYearTabs();
     }
 };
 
+// Calculate Indian Financial Year context out of standard text configurations
+function getIndianFinancialYear(dateStr) {
+    if(!dateStr) return "";
+    let parts = dateStr.split('T')[0].split(/[-/]/);
+    let y = parseInt(parts[0]), m = parseInt(parts[1]);
+    
+    // If layout incoming is DD/MM/YYYY, correct parts extraction indexing mapping bounds
+    if (parts[2] && parts[2].length === 4) { y = parseInt(parts[2]); m = parseInt(parts[1]); }
+    
+    // FY runs April to March. If month is Jan, Feb, Mar (1,2,3), year falls to previous cycle boundary group
+    if (m >= 1 && m <= 3) {
+        return `FY ${(y - 1).toString().slice(-2)}-${y.toString().slice(-2)}`;
+    } else {
+        return `FY ${y.toString().slice(-2)}-${(y + 1).toString().slice(-2)}`;
+    }
+}
+
 function generateSequentialInvoiceNumber() {
     if(historicalLedger.length === 0 || viewOnlyMode) return;
+    
+    const activeSelectedDate = document.getElementById('uiDate').value;
+    const currentInvoiceFY = getIndianFinancialYear(activeSelectedDate);
+    
     let maxNum = 0;
     historicalLedger.forEach(row => {
         let invField = row.invoiceno || row.InvoiceNo;
-        if(invField) {
-            let matches = invField.toString().match(/\d+/);
-            if(matches) {
-                let num = parseInt(matches[0]);
-                if(num > maxNum) maxNum = num;
+        let rowDateStr = row.date || row.Date;
+        
+        if(invField && rowDateStr) {
+            let rowFY = getIndianFinancialYear(rowDateStr.toString());
+            // Sequence matching check: Only isolate entries inside the matching financial year bounds
+            if (rowFY === currentInvoiceFY) {
+                let matches = invField.toString().match(/\d+/);
+                if(matches) {
+                    let num = parseInt(matches[0]);
+                    if(num > maxNum) maxNum = num;
+                }
             }
         }
     });
+    
     let nextNumString = (maxNum + 1).toString().padStart(3, '0');
     document.getElementById('uiInvNo').value = `ICPE/${nextNumString}`;
     render();
 }
 
+function onDateSelectionChange() {
+    generateSequentialInvoiceNumber();
+}
+
 function initClientUI() {
     const s = document.getElementById('uiClient'); s.innerHTML = "";
-    if(clientsDB.length === 0) {
-        s.add(new Option("No clients found", ""));
-    } else {
-        clientsDB.forEach(c => s.add(new Option(c.CompanyName || c.id, c.id)));
-    }
+    clientsDB.forEach(c => s.add(new Option(c.CompanyName || c.id, c.id)));
     mapClient();
     addNewRow();
 }
@@ -422,6 +470,8 @@ function render() {
             hsn = comp ? comp.HSN : '998898';
             qty = parseFloat(row.querySelector('.row-qty').value) || 0;
             price = parseFloat(row.querySelector('.row-price').value) || 0;
+            
+            // MATH BUG FIXED: Explicitly grab active user input rate strings for real-time overrides
             let gstRate = parseFloat(row.querySelector('.row-gst').value) || 18;
             let tdsRate = parseFloat(row.querySelector('.row-tds').value) || 2;
 
@@ -461,17 +511,15 @@ function commitToCloudLedger() {
         let f = row.invoiceno || row.InvoiceNo;
         return f && f.toString().toLowerCase() === invNo.toLowerCase();
     });
-    
-    if(duplicate) {
-        alert(`Data Entry Error: Invoice Reference ${invNo} already logged inside Drive database Ledger!`);
-        return;
-    }
+    if(duplicate) { alert(`Data Entry Error: Invoice Reference ${invNo} already logged inside Drive database Ledger!`); return; }
 
     let itemsPayload = [];
     document.querySelectorAll('#itemRows tr').forEach(row => {
         const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
         const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
         const price = parseFloat(row.querySelector('.row-price').value) || 0;
+        
+        // Push raw field rates straight to Apps Script processing matrix
         const lineGst = parseFloat(row.querySelector('.row-gst').value) || 18;
         const lineTds = parseFloat(row.querySelector('.row-tds').value) || 2;
         
@@ -497,6 +545,39 @@ function commitToCloudLedger() {
     }).catch(e => alert("Network transmission fault recorded: " + e));
 }
 
+function buildFinancialYearTabs() {
+    let fySet = new Set();
+    historicalLedger.forEach(row => {
+        let iDt = row.date || row.Date;
+        if(iDt) {
+            let fy = getIndianFinancialYear(iDt.toString());
+            if(fy) fySet.add(fy);
+        }
+    });
+
+    // Auto-include current active loop cycle year if ledger dataset database returns blank rows
+    let currentFY = getIndianFinancialYear(new Date().toISOString());
+    fySet.add(currentFY);
+
+    let fyArray = Array.from(fySet).sort().reverse();
+    currentSelectedFY = fyArray[0]; // Default selection maps current operational target cycle
+
+    const wrapper = document.getElementById('fyTabWrapper');
+    wrapper.innerHTML = "";
+    fyArray.forEach(fy => {
+        let btn = document.createElement('button');
+        btn.className = `fy-btn ${fy === currentSelectedFY ? 'active' : ''}`;
+        btn.innerText = fy;
+        btn.onclick = function() {
+            document.querySelectorAll('.fy-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentSelectedFY = fy;
+            populateHistoryViewer();
+        };
+        wrapper.appendChild(btn);
+    });
+}
+
 function populateHistoryViewer() {
     const container = document.getElementById('historyList');
     container.innerHTML = "";
@@ -507,15 +588,27 @@ function populateHistoryViewer() {
         let iDt = row.date || row.Date;
         let iCl = row.clientname || row.ClientName;
         let iJc = row.jobcard || row.JobCard || '';
-        if(!iNo) return;
+        if(!iNo || !iDt) return;
         
+        // Segment row items by financial sorting context
+        let rowFY = getIndianFinancialYear(iDt.toString());
+        if (rowFY !== currentSelectedFY) return;
+
         if(!uniqueInvoices[iNo]) {
             uniqueInvoices[iNo] = { invoiceNo: iNo, date: iDt, client: iCl, jobCard: iJc, items: [] };
         }
         uniqueInvoices[iNo].items.push(row);
     });
 
-    Object.values(uniqueInvoices).sort((a,b) => b.invoiceNo.localeCompare(a.invoiceNo)).forEach(inv => {
+    let keys = Object.keys(uniqueInvoices).sort((a,b) => b.localeCompare(a, undefined, {numeric: true, sensitivity: 'base'}));
+    
+    if(keys.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:20px;color:#64748b;font-style:italic;">No logged accounting entries found inside ${currentSelectedFY}.</div>`;
+        return;
+    }
+
+    keys.forEach(key => {
+        let inv = uniqueInvoices[key];
         let div = document.createElement('div');
         div.className = "history-item";
         let displayDate = formatToDDMMYYYY(inv.date);
@@ -533,7 +626,6 @@ function populateHistoryViewer() {
 
 function viewClosedInvoice(invNo) {
     viewOnlyMode = true;
-    
     let uniqueInvoices = {};
     historicalLedger.forEach(row => {
         let iNo = row.invoiceno || row.InvoiceNo;
@@ -549,11 +641,7 @@ function viewClosedInvoice(invNo) {
     let selectedInv = uniqueInvoices[invNo];
     if(!selectedInv) return;
 
-    savedState = {
-        invoiceNo: selectedInv.invoiceNo,
-        date: selectedInv.date,
-        jobCard: selectedInv.jobCard
-    };
+    savedState = { invoiceNo: selectedInv.invoiceNo, date: selectedInv.date, jobCard: selectedInv.jobCard };
 
     switchTab('CREATE');
     document.getElementById('btnExitView').style.display = "block";
@@ -569,29 +657,24 @@ function viewClosedInvoice(invNo) {
     });
 
     if (clientProfile) {
-        document.getElementById('lblClientAddr').innerText = clientProfile.Address || clientProfile.address || clientProfile.C || '-';
-        document.getElementById('lblClientPhone').innerText = clientProfile.Phone || clientProfile.phone || clientProfile["Phone 1 "] || clientProfile.D || '-';
-        document.getElementById('lblClientGst').innerText = clientProfile.GSTIN || clientProfile.gstin || clientProfile["GST No"] || clientProfile.E || '-';
+        document.getElementById('lblClientAddr').innerText = clientProfile.Address || '-';
+        document.getElementById('lblClientPhone').innerText = clientProfile.Phone || '-';
+        document.getElementById('lblClientGst').innerText = clientProfile.GSTIN || '-';
     } else {
-        document.getElementById('lblClientAddr').innerText = '-';
-        document.getElementById('lblClientPhone').innerText = '-';
-        document.getElementById('lblClientGst').innerText = '-';
+        document.getElementById('lblClientAddr').innerText = '-'; document.getElementById('lblClientPhone').innerText = '-'; document.getElementById('lblClientGst').innerText = '-';
     }
     
     const tbody = document.getElementById('itemRows');
     tbody.innerHTML = "";
     selectedInv.rows.forEach(row => {
         let tr = document.createElement('tr');
-        let rDesc = row.componentdescription || row.ComponentDescription || row.desc || '';
+        let rDesc = row.componentdescription || row.desc || '';
         let rQty = row.qty || 0;
-        let rPrice = row.unitprice || row.UnitPrice || row.price || 0;
+        let rPrice = row.unitprice || row.price || 0;
         let rGstAmount = row.gstamount || 0;
         let rTdsAmount = row.tdsamount || 0;
 
-        tr.dataset.desc = rDesc;
-        tr.dataset.hsn = "998898";
-        tr.dataset.gstamount = rGstAmount;
-        tr.dataset.tdsamount = rTdsAmount;
+        tr.dataset.desc = rDesc; tr.dataset.hsn = "998898"; tr.dataset.gstamount = rGstAmount; tr.dataset.tdsamount = rTdsAmount;
         
         tr.innerHTML = `
             <td><strong>${rDesc}</strong></td>
@@ -603,13 +686,11 @@ function viewClosedInvoice(invNo) {
         `;
         tbody.appendChild(tr);
     });
-    
     render();
 }
 
 function exitViewMode() {
-    viewOnlyMode = false;
-    savedState = null;
+    viewOnlyMode = false; savedState = null;
     document.getElementById('btnExitView').style.display = "none";
     document.getElementById('panelHeader').innerText = "⚡ ICPE Billing Engine";
     document.getElementById('btnPostCloud').style.display = "block";
@@ -631,6 +712,7 @@ function switchTab(target) {
         document.getElementById('panelView').style.display = "block";
         document.getElementById('tabCreate').className = "tab-btn";
         document.getElementById('tabView').className = "tab-btn active";
+        buildFinancialYearTabs();
         populateHistoryViewer();
     }
 }
@@ -652,32 +734,51 @@ function numToWords(num) {
 
 function formatToDDMMYYYY(dateString) {
     if (!dateString || dateString.trim() === "" || dateString === "-") return "-";
-    
-    let cleanDate = dateString.split('T')[0].trim();
-    
+    let targetString = dateString.toString().trim();
+    if (targetString.includes('T18:30:00') || targetString.includes('18:30:00')) {
+        const localDateObject = new Date(targetString);
+        if (!isNaN(localDateObject.getTime())) {
+            let day = String(localDateObject.getDate()).padStart(2, '0');
+            let month = String(localDateObject.getMonth() + 1).padStart(2, '0');
+            let year = localDateObject.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+    }
+    let cleanDate = targetString.split('T')[0].trim();
     if (cleanDate.includes('/')) {
         let parts = cleanDate.split('/');
         if (parts.length === 3) {
-            if (parts[0].length === 4) {
-                return `${parts[2]}-${parts[1]}-${parts[0]}`;
-            }
-            return parts.join('-');
+            if (parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
         }
     }
-    
-    let parts = cleanDate.split('-');
-    if (parts.length === 3) {
-        if (parts[0].length === 4) {
-            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    if (cleanDate.includes('-')) {
+        let parts = cleanDate.split('-');
+        if (parts.length === 3) {
+            if (parts[0].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
         }
-        return parts.join('-');
     }
     return dateString;
 }
 
-function exportDesktopPDF() { window.print(); }
-
-window.onload = loadExternalData;
+function exportDesktopPDF() {
+    // 1. Grab the current invoice number and date from the layout elements
+    const invNum = document.getElementById('lblInvNo').innerText.trim().replace(/\//g, '/');
+    const invDate = document.getElementById('lblDate').innerText.trim();
+    
+    // 2. Backup the original browser tab title
+    const originalTitle = document.title;
+    
+    // 3. Temporarily set the title to your precise naming schema
+    document.title = `${invNum}`;
+    
+    // 4. Trigger the native print/PDF window
+    window.print();
+    
+    // 5. Restore the original tab title back immediately after the dialog closes
+    document.title = originalTitle;
+}
 </script>
 </body>
 </html>
