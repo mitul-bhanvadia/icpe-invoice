@@ -14,9 +14,13 @@
         label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #64748b; }
         
         /* Financial Year Tabs */
-        .fy-container { display: flex; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 8px; margin-bottom: 25px; width: fit-content; }
+        .fy-container { display: flex; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 8px; margin-bottom: 20px; width: fit-content; }
         .fy-btn { background: white; border: 1px solid #cbd5e1; padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #64748b; transition: all 0.2s; }
         .fy-btn.active { background: #475569; color: white; border-color: #475569; }
+
+        /* Sub-Filter Controls Panel */
+        .filter-panel { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
+        select, input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; height: 38px; }
 
         /* Metric Summary Cards Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
@@ -34,7 +38,6 @@
         
         #gatekeeper-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:99999; display:flex; justify-content:center; align-items:center; color:white; }
         .gate-card { background:white; color:#334155; padding:30px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); width:320px; text-align:center; }
-        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -56,9 +59,35 @@
         <a href="index.html" class="nav-btn">🔌 Return to Billing</a>
     </h2>
     
-    <label>Select Operational Financial Cycle:</label>
-    <div class="fy-container" id="fyReportTabWrapper">
-        <!-- Dynamically generated year tabs drop here -->
+    <label>1st Level Filter (Financial Cycle):</label>
+    <div class="fy-container" id="fyReportTabWrapper"></div>
+
+    <label>2nd Level Sub-Filters:</label>
+    <div class="filter-panel">
+        <div>
+            <label>Quarterly Segment</label>
+            <select id="filtQuarter" onchange="onSubFilterChange()">
+                <option value="ALL">Full Financial Year (All)</option>
+                <option value="Q1">Q1 (Apr - Jun)</option>
+                <option value="Q2">Q2 (Jul - Sep)</option>
+                <option value="Q3">Q3 (Oct - Dec)</option>
+                <option value="Q4">Q4 (Jan - Mar)</option>
+            </select>
+        </div>
+        <div>
+            <label>Filter by Specific Client</label>
+            <select id="filtClient" onchange="onSubFilterChange()">
+                <option value="ALL">All Registered Clients</option>
+            </select>
+        </div>
+        <div>
+            <label>Custom Date From</label>
+            <input type="date" id="filtStartDate" onchange="onCustomDateChange()">
+        </div>
+        <div>
+            <label>Custom Date To</label>
+            <input type="date" id="filtEndDate" onchange="onCustomDateChange()">
+        </div>
     </div>
 
     <!-- Analytics Output Summary Dashboard Cards -->
@@ -92,9 +121,7 @@
                 <th class="text-right">TDS Withheld</th>
             </tr>
         </thead>
-        <tbody id="reportClientRows">
-            <!-- Dynamically populated rows arrive here -->
-        </tbody>
+        <tbody id="reportClientRows"></tbody>
     </table>
 </div>
 
@@ -129,10 +156,24 @@ function fetchCloudLedger() {
 window.handleLedgerJsonpResponse = function(data) {
     if (data && Array.isArray(data)) {
         historicalLedger = data;
+        populateClientFilterDropdown();
         buildFinancialYearTabs();
         calculateAndRenderReports();
     }
 };
+
+function populateClientFilterDropdown() {
+    let clientSet = new Set();
+    historicalLedger.forEach(row => {
+        let name = row.clientname || row.ClientName;
+        if (name) clientSet.add(name.trim());
+    });
+    const dropdown = document.getElementById('filtClient');
+    dropdown.innerHTML = '<option value="ALL">All Registered Clients</option>';
+    Array.from(clientSet).sort().forEach(client => {
+        dropdown.add(new Option(client, client));
+    });
+}
 
 function getIndianFinancialYear(dateStr) {
     if(!dateStr) return "";
@@ -154,10 +195,23 @@ function dateStringIsolation(dateStr) {
         if (!isNaN(localObj.getTime())) {
             let day = String(localObj.getDate()).padStart(2, '0');
             let month = String(localObj.getMonth() + 1).padStart(2, '0');
-            return `${day}/${month}/${localObj.getFullYear()}`;
+            return `${localObj.getFullYear()}-${month}-${day}`;
         }
     }
     return str.split('T')[0].trim();
+}
+
+function onSubFilterChange() {
+    // If Quarter or Client switches away from 'ALL', drop custom dates to prevent logical conflicts
+    document.getElementById('filtStartDate').value = "";
+    document.getElementById('filtEndDate').value = "";
+    calculateAndRenderReports();
+}
+
+function onCustomDateChange() {
+    // If explicit custom date range is used, bypass the general Quarter selection box bounds
+    document.getElementById('filtQuarter').value = "ALL";
+    calculateAndRenderReports();
 }
 
 function buildFinancialYearTabs() {
@@ -194,14 +248,41 @@ function calculateAndRenderReports() {
     let grossTotal = 0, netSubtotal = 0, totalGst = 0, totalTds = 0;
     let clientMetrics = {};
 
+    const qFilter = document.getElementById('filtQuarter').value;
+    const cFilter = document.getElementById('filtClient').value.toLowerCase();
+    const startDateVal = document.getElementById('filtStartDate').value;
+    const endDateVal = document.getElementById('filtEndDate').value;
+
     historicalLedger.forEach(row => {
         let iDt = row.date || row.Date;
         if (!iDt) return;
 
+        // Level 1 Filter: Financial Year Match
         let rowFY = getIndianFinancialYear(iDt.toString());
         if (rowFY !== currentSelectedFY) return;
 
-        // Automatically falls back to calculating (Qty * UnitPrice) if old rows lack Subtotal values
+        // Local Date parsing steps for exact sub-comparisons
+        let ISO_DateString = dateStringIsolation(iDt.toString()); // standardizes to YYYY-MM-DD
+        let dateObj = new Date(ISO_DateString);
+        let month = dateObj.getMonth() + 1; // 1 = January, 12 = December
+
+        // Level 2 Sub-Filter A: Quarter Filtering Strategy
+        if (qFilter !== "ALL") {
+            if (qFilter === "Q1" && (month < 4 || month > 6)) return;
+            if (qFilter === "Q2" && (month < 7 || month > 9)) return;
+            if (qFilter === "Q3" && (month < 10 || month > 12)) return;
+            if (qFilter === "Q4" && (month < 1 || month > 3)) return;
+        }
+
+        // Level 2 Sub-Filter B: Client Filtering Strategy
+        let rClient = row.clientname || row.ClientName || "";
+        if (cFilter !== "ALL" && rClient.trim().toLowerCase() !== cFilter) return;
+
+        // Level 2 Sub-Filter C: Custom Range Date Checking
+        if (startDateVal && ISO_DateString < startDateVal) return;
+        if (endDateVal && ISO_DateString > endDateVal) return;
+
+        // Collate Metrics
         let rowSubtotal = parseFloat(row.subtotal || (parseFloat(row.qty || 0) * parseFloat(row.unitprice || 0))) || 0;
         let rowGst = parseFloat(row.gstamount) || 0;
         let rowTds = parseFloat(row.tdsamount) || 0;
@@ -212,7 +293,7 @@ function calculateAndRenderReports() {
         totalGst += rowGst;
         totalTds += rowTds;
 
-        let cName = row.clientname || row.ClientName || "Unknown Client";
+        let cName = rClient || "Unknown Client";
         if (!clientMetrics[cName]) {
             clientMetrics[cName] = { jobs: 0, subtotal: 0, gst: 0, tds: 0 };
         }
@@ -222,17 +303,19 @@ function calculateAndRenderReports() {
         clientMetrics[cName].tds += rowTds;
     });
 
+    // Render Metrics Cards
     document.getElementById('repGrossTurnover').innerText = "₹" + grossTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repNetAssessable').innerText = "₹" + netSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalGst').innerText = "₹" + totalGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalTds').innerText = "₹" + totalTds.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
+    // Build breakdown table body
     const tbody = document.getElementById('reportClientRows');
     tbody.innerHTML = "";
 
     let clients = Object.keys(clientMetrics);
     if (clients.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;font-style:italic;padding:15px;">No transactions found for this period.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;font-style:italic;padding:15px;">No transactions found matching your active filter criteria.</td></tr>`;
         return;
     }
 
