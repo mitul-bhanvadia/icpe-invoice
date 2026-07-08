@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ICPE ERP Engine Pro v4.0</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; }
@@ -86,7 +87,7 @@
     <div class="tab-box">
         <button class="tab-btn active" id="tabCreate" onclick="switchTab('CREATE')">＋ Create New Invoice</button>
         <button class="tab-btn" id="tabView" onclick="switchTab('VIEW')">🔍 Historical Records Viewer</button>
-        <button class="tab-btn" id="tabReport" onclick="switchTab('REPORT')">📊 Sales Reports</button>
+        <a href="report.html" class="tab-btn" style="text-decoration:none; display:inline-block; align-content:center;">📊 Sales Reports</a>
         <button class="tab-btn btn-view-mode" id="btnExitView" onclick="exitViewMode()">⚠️ Exit View Mode</button>
     </div>
 
