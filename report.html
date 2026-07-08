@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICPE ERP - Financial Reports Terminal</title>
+    <style>
+        :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
+        
+        .dashboard-container { max-width: 950px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #64748b; }
+        
+        /* Financial Year Tabs */
+        .fy-container { display: flex; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 8px; margin-bottom: 25px; width: fit-content; }
+        .fy-btn { background: white; border: 1px solid #cbd5e1; padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #64748b; transition: all 0.2s; }
+        .fy-btn.active { background: #475569; color: white; border-color: #475569; }
+
+        /* Metric Summary Cards Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card { background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
+        .card-val { font-size: 22px; font-weight: bold; color: var(--primary); margin-top: 5px; }
+
+        /* Table Formatting Layout */
+        .ui-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .ui-table th { background: #f1f5f9; text-align: left; padding: 12px 10px; font-size: 13px; color: #475569; border-bottom: 2px solid #cbd5e1; }
+        .ui-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        .text-right { text-align: right; }
+        
+        /* Navigation Button Shortcut */
+        .nav-btn { background: var(--accent); color: white; text-decoration: none; padding: 8px 14px; font-size: 13px; font-weight: bold; border-radius: 6px; }
+        
+        #gatekeeper-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:99999; display:flex; justify-content:center; align-items:center; color:white; }
+        .gate-card { background:white; color:#334155; padding:30px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); width:320px; text-align:center; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<!-- SECURE PROTECTION GATE SHIELD -->
+<div id="gatekeeper-screen">
+    <div class="gate-card">
+        <h2 style="margin-top:0; color:#0f172a; border:none; justify-content:center;">🔐 Reports Portal</h2>
+        <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Provide terminal authorization password keys to extract financial ledgers.</p>
+        <input type="password" id="gateKey" placeholder="Enter System Password" style="margin-bottom:15px; padding:12px; text-align:center;">
+        <button class="fy-btn active" style="width:100%; padding:12px; border-radius:6px;" onclick="verifyGateSecurity()">Unlock Dashboard</button>
+        <p id="gateErr" style="color:#ef4444; font-size:12px; font-weight:bold; margin-top:10px; display:none;">Invalid access credential.</p>
+    </div>
+</div>
+
+<div class="dashboard-container" id="mainDashboard" style="display:none;">
+    <h2>
+        <span>📈 ICPE Sales Analytics</span>
+        <a href="index.html" class="nav-btn">🔌 Return to Billing</a>
+    </h2>
+    
+    <label>Select Operational Financial Cycle:</label>
+    <div class="fy-container" id="fyReportTabWrapper">
+        <!-- Dynamically generated year tabs drop here -->
+    </div>
+
+    <!-- Analytics Output Summary Dashboard Cards -->
+    <div class="grid">
+        <div class="card">
+            <label style="text-transform: uppercase; font-size: 11px;">Gross Turnover (Inc. GST)</label>
+            <div id="repGrossTurnover" class="card-val">₹0.00</div>
+        </div>
+        <div class="card">
+            <label style="text-transform: uppercase; font-size: 11px; color: var(--accent);">Assessable Subtotal Value</label>
+            <div id="repNetAssessable" class="card-val" style="color: var(--accent);">₹0.00</div>
+        </div>
+        <div class="card">
+            <label style="text-transform: uppercase; font-size: 11px; color: #f59e0b;">Total GST Pool (CGST+SGST)</label>
+            <div id="repTotalGst" class="card-val" style="color: #f59e0b;">₹0.00</div>
+        </div>
+        <div class="card">
+            <label style="text-transform: uppercase; font-size: 11px; color: #ef4444;">Withheld TDS Pool (194C)</label>
+            <div id="repTotalTds" class="card-val" style="color: #ef4444;">₹0.00</div>
+        </div>
+    </div>
+
+    <h3 style="color: var(--primary); margin-bottom: 5px;">🏢 Client-Wise Breakdown Summary</h3>
+    <table class="ui-table">
+        <thead>
+            <tr>
+                <th>Client Business Entity</th>
+                <th class="text-right">Billed Items</th>
+                <th class="text-right">Subtotal Base (INR)</th>
+                <th class="text-right">GST Collected</th>
+                <th class="text-right">TDS Withheld</th>
+            </tr>
+        </thead>
+        <tbody id="reportClientRows">
+            <!-- Dynamically populated rows arrive here -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+// --- ENDPOINT MATRIX SETUP ---
+const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby705eXum08yMMX4a3T2bOp8muLuBNK_mC-cNe0yFO85CstZ_LBG1X6QbWpcIKtkH6h9g/exec";
+const CRYPTO_GATE_KEY = "ICPE@2026";
+
+let historicalLedger = [];
+let currentSelectedFY = "";
+
+function verifyGateSecurity() {
+    if (document.getElementById('gateKey').value === CRYPTO_GATE_KEY) {
+        document.getElementById('gatekeeper-screen').style.display = "none";
+        document.getElementById('mainDashboard').style.display = "block";
+        fetchCloudLedger();
+    } else {
+        document.getElementById('gateErr').style.display = "block";
+    }
+}
+
+document.getElementById('gateKey').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') verifyGateSecurity();
+});
+
+function fetchCloudLedger() {
+    const scriptLedger = document.createElement('script');
+    scriptLedger.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleLedgerJsonpResponse`;
+    document.body.appendChild(scriptLedger);
+}
+
+window.handleLedgerJsonpResponse = function(data) {
+    if (data && Array.isArray(data)) {
+        historicalLedger = data;
+        buildFinancialYearTabs();
+        calculateAndRenderReports();
+    }
+};
+
+function getIndianFinancialYear(dateStr) {
+    if(!dateStr) return "";
+    let cleanDate = dateStringIsolation(dateStr);
+    let parts = cleanDate.split(/[-/]/);
+    let y = parseInt(parts[0]), m = parseInt(parts[1]);
+    if (parts[2] && parts[2].length === 4) { y = parseInt(parts[2]); m = parseInt(parts[1]); }
+    if (m >= 1 && m <= 3) {
+        return `FY ${(y - 1).toString().slice(-2)}-${y.toString().slice(-2)}`;
+    } else {
+        return `FY ${y.toString().slice(-2)}-${(y + 1).toString().slice(-2)}`;
+    }
+}
+
+function dateStringIsolation(dateStr) {
+    let str = dateStr.toString().trim();
+    if (str.includes('T18:30:00') || str.includes('18:30:00')) {
+        const localObj = new Date(str);
+        if (!isNaN(localObj.getTime())) {
+            let day = String(localObj.getDate()).padStart(2, '0');
+            let month = String(localObj.getMonth() + 1).padStart(2, '0');
+            return `${day}/${month}/${localObj.getFullYear()}`;
+        }
+    }
+    return str.split('T')[0].trim();
+}
+
+function buildFinancialYearTabs() {
+    let fySet = new Set();
+    historicalLedger.forEach(row => {
+        let iDt = row.date || row.Date;
+        if(iDt) {
+            let fy = getIndianFinancialYear(iDt.toString());
+            if(fy) fySet.add(fy);
+        }
+    });
+    fySet.add(getIndianFinancialYear(new Date().toISOString()));
+    let fyArray = Array.from(fySet).sort().reverse();
+    
+    if(!currentSelectedFY) currentSelectedFY = fyArray[0];
+
+    const wrapper = document.getElementById('fyReportTabWrapper');
+    wrapper.innerHTML = "";
+    fyArray.forEach(fy => {
+        let btn = document.createElement('button');
+        btn.className = `fy-btn ${fy === currentSelectedFY ? 'active' : ''}`;
+        btn.innerText = fy;
+        btn.onclick = function() {
+            document.querySelectorAll('.fy-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentSelectedFY = fy;
+            calculateAndRenderReports();
+        };
+        wrapper.appendChild(btn);
+    });
+}
+
+function calculateAndRenderReports() {
+    let grossTotal = 0, netSubtotal = 0, totalGst = 0, totalTds = 0;
+    let clientMetrics = {};
+
+    historicalLedger.forEach(row => {
+        let iDt = row.date || row.Date;
+        if (!iDt) return;
+
+        let rowFY = getIndianFinancialYear(iDt.toString());
+        if (rowFY !== currentSelectedFY) return;
+
+        // Automatically falls back to calculating (Qty * UnitPrice) if old rows lack Subtotal values
+        let rowSubtotal = parseFloat(row.subtotal || (parseFloat(row.qty || 0) * parseFloat(row.unitprice || 0))) || 0;
+        let rowGst = parseFloat(row.gstamount) || 0;
+        let rowTds = parseFloat(row.tdsamount) || 0;
+        let rowGross = rowSubtotal + rowGst;
+
+        grossTotal += rowGross;
+        netSubtotal += rowSubtotal;
+        totalGst += rowGst;
+        totalTds += rowTds;
+
+        let cName = row.clientname || row.ClientName || "Unknown Client";
+        if (!clientMetrics[cName]) {
+            clientMetrics[cName] = { jobs: 0, subtotal: 0, gst: 0, tds: 0 };
+        }
+        clientMetrics[cName].jobs++;
+        clientMetrics[cName].subtotal += rowSubtotal;
+        clientMetrics[cName].gst += rowGst;
+        clientMetrics[cName].tds += rowTds;
+    });
+
+    document.getElementById('repGrossTurnover').innerText = "₹" + grossTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('repNetAssessable').innerText = "₹" + netSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('repTotalGst').innerText = "₹" + totalGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('repTotalTds').innerText = "₹" + totalTds.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    const tbody = document.getElementById('reportClientRows');
+    tbody.innerHTML = "";
+
+    let clients = Object.keys(clientMetrics);
+    if (clients.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;font-style:italic;padding:15px;">No transactions found for this period.</td></tr>`;
+        return;
+    }
+
+    clients.forEach(cName => {
+        let metrics = clientMetrics[cName];
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${cName}</strong></td>
+            <td class="text-right">${metrics.jobs}</td>
+            <td class="text-right">₹${metrics.subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+            <td class="text-right">₹${metrics.gst.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+            <td class="text-right" style="color:#ef4444;">₹${metrics.tds.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+</script>
+</body>
+</html>
