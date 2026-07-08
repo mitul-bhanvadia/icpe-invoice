@@ -628,26 +628,54 @@ function populateHistoryViewer() {
 
 function viewClosedInvoice(invNo) {
     viewOnlyMode = true;
+    
     let uniqueInvoices = {};
     historicalLedger.forEach(row => {
         let iNo = row.invoiceno || row.InvoiceNo;
         let iDt = row.date || row.Date;
         let iCl = row.clientname || row.ClientName;
         let iJc = row.jobcard || row.JobCard || '';
-        if(iNo) {
-            if(!uniqueInvoices[iNo]) uniqueInvoices[iNo] = { invoiceNo: iNo, date: iDt, clientName: iCl, jobCard: iJc, rows: [] };
-            uniqueInvoices[iNo].rows.push(row);
+        
+        if (iNo && iDt) {
+            // Fix: Create a unique compound key using Invoice Number + Financial Year
+            let rowFY = getIndianFinancialYear(iDt.toString());
+            let uniqueComboKey = `${iNo}_${rowFY}`;
+            
+            if (!uniqueInvoices[uniqueComboKey]) {
+                uniqueInvoices[uniqueComboKey] = { 
+                    invoiceNo: iNo, 
+                    date: iDt, 
+                    clientName: iCl, 
+                    jobCard: iJc, 
+                    fy: rowFY,
+                    rows: [] 
+                };
+            }
+            uniqueInvoices[uniqueComboKey].rows.push(row);
         }
     });
 
-    let selectedInv = uniqueInvoices[invNo];
-    if(!selectedInv) return;
+    // Match the selected invoice number, but explicitly filter it to the active Financial Year tab
+    let activeKey = `${invNo}_${currentSelectedFY}`;
+    let selectedInv = uniqueInvoices[activeKey];
+    
+    // Fallback security check if year mismatch happens
+    if (!selectedInv) {
+        // Try searching for any match if exact active year tracking fails
+        selectedInv = Object.values(uniqueInvoices).find(inv => inv.invoiceNo === invNo);
+    }
+    
+    if (!selectedInv) return;
 
-    savedState = { invoiceNo: selectedInv.invoiceNo, date: selectedInv.date, jobCard: selectedInv.jobCard };
+    savedState = {
+        invoiceNo: selectedInv.invoiceNo,
+        date: selectedInv.date,
+        jobCard: selectedInv.jobCard
+    };
 
     switchTab('CREATE');
     document.getElementById('btnExitView').style.display = "block";
-    document.getElementById('panelHeader').innerText = `📋 Viewing Historical Record: ${invNo}`;
+    document.getElementById('panelHeader').innerText = `📋 Viewing Historical Record: ${invNo} (${selectedInv.fy})`;
     
     document.getElementById('btnPostCloud').style.display = "none";
     document.getElementById('btnAddLine').style.display = "none";
@@ -663,20 +691,25 @@ function viewClosedInvoice(invNo) {
         document.getElementById('lblClientPhone').innerText = clientProfile.Phone || '-';
         document.getElementById('lblClientGst').innerText = clientProfile.GSTIN || '-';
     } else {
-        document.getElementById('lblClientAddr').innerText = '-'; document.getElementById('lblClientPhone').innerText = '-'; document.getElementById('lblClientGst').innerText = '-';
+        document.getElementById('lblClientAddr').innerText = '-';
+        document.getElementById('lblClientPhone').innerText = '-';
+        document.getElementById('lblClientGst').innerText = '-';
     }
     
     const tbody = document.getElementById('itemRows');
     tbody.innerHTML = "";
     selectedInv.rows.forEach(row => {
         let tr = document.createElement('tr');
-        let rDesc = row.componentdescription || row.desc || '';
+        let rDesc = row.componentdescription || row.ComponentDescription || row.desc || '';
         let rQty = row.qty || 0;
-        let rPrice = row.unitprice || row.price || 0;
+        let rPrice = row.unitprice || row.UnitPrice || row.price || 0;
         let rGstAmount = row.gstamount || 0;
         let rTdsAmount = row.tdsamount || 0;
 
-        tr.dataset.desc = rDesc; tr.dataset.hsn = "998898"; tr.dataset.gstamount = rGstAmount; tr.dataset.tdsamount = rTdsAmount;
+        tr.dataset.desc = rDesc;
+        tr.dataset.hsn = "998898";
+        tr.dataset.gstamount = rGstAmount;
+        tr.dataset.tdsamount = rTdsAmount;
         
         tr.innerHTML = `
             <td><strong>${rDesc}</strong></td>
@@ -688,6 +721,7 @@ function viewClosedInvoice(invNo) {
         `;
         tbody.appendChild(tr);
     });
+    
     render();
 }
 
