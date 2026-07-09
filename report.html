@@ -20,7 +20,15 @@
 
         /* Sub-Filter Controls Panel */
         .filter-panel { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
-        select, input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; height: 38px; }
+        select, input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; height: 38px; background: white; }
+
+        /* Multi-Select Dropdown Container */
+        .multiselect-dropdown { position: relative; width: 100%; }
+        .multiselect-header { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; height: 38px; line-height: 20px; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .multiselect-options { display: none; position: absolute; top: 40px; left: 0; width: 100%; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 5px 0; }
+        .multiselect-item { padding: 8px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
+        .multiselect-item:hover { background: #f1f5f9; }
+        .multiselect-item input { width: auto; height: auto; cursor: pointer; }
 
         /* Metric Summary Cards Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
@@ -32,6 +40,16 @@
         .ui-table th { background: #f1f5f9; text-align: left; padding: 12px 10px; font-size: 13px; color: #475569; border-bottom: 2px solid #cbd5e1; }
         .ui-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         .text-right { text-align: right; }
+        
+        /* Interactive Row Styles */
+        .clickable-row { cursor: pointer; transition: background 0.2s; }
+        .clickable-row:hover { background: #f8fafc; }
+        .clickable-row.expanded { background: #f1f5f9; }
+        .drawer-row { display: none; background: #fafafa; }
+        .drawer-cell { padding: 0 !important; }
+        .drawer-table { width: 100%; border-collapse: collapse; background: #ffffff; }
+        .drawer-table th { background: #f8fafc; font-size: 11px; padding: 6px 10px; border-bottom: 1px solid #e2e8f0; color: #64748b; }
+        .drawer-table td { font-size: 12px; padding: 6px 10px; border-bottom: 1px dashed #e2e8f0; color: #475569; }
         
         /* Navigation Button Shortcut */
         .nav-btn { background: var(--accent); color: white; text-decoration: none; padding: 8px 14px; font-size: 13px; font-weight: bold; border-radius: 6px; }
@@ -75,10 +93,14 @@
             </select>
         </div>
         <div>
-            <label>Filter by Specific Client</label>
-            <select id="filtClient" onchange="onSubFilterChange()">
-                <option value="ALL">All Registered Clients</option>
-            </select>
+            <label>Filter by Client (Multi-Select)</label>
+            <div class="multiselect-dropdown">
+                <div class="multiselect-header" onclick="toggleDropdown(event)">
+                    <span id="multiselectLabel">All Registered Clients</span>
+                    <span>▼</span>
+                </div>
+                <div class="multiselect-options" id="multiselectOptions"></div>
+            </div>
         </div>
         <div>
             <label>Custom Date From</label>
@@ -110,12 +132,12 @@
         </div>
     </div>
 
-    <h3 style="color: var(--primary); margin-bottom: 5px;">🏢 Client-Wise Breakdown Summary</h3>
+    <h3 style="color: var(--primary); margin-bottom: 5px;">🏢 Client-Wise Breakdown Summary <span style="font-size:12px; font-weight:normal; color:#64748b;">(Click row to view itemized records)</span></h3>
     <table class="ui-table">
         <thead>
             <tr>
                 <th>Client Business Entity</th>
-                <th class="text-right">Billed Items</th>
+                <th class="text-right">Billed Items Count</th>
                 <th class="text-right">Subtotal Base (INR)</th>
                 <th class="text-right">GST Collected</th>
                 <th class="text-right">TDS Withheld</th>
@@ -126,12 +148,12 @@
 </div>
 
 <script>
-// --- ENDPOINT MATRIX SETUP ---
 const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby705eXum08yMMX4a3T2bOp8muLuBNK_mC-cNe0yFO85CstZ_LBG1X6QbWpcIKtkH6h9g/exec";
 const CRYPTO_GATE_KEY = "ICPE@2026";
 
 let historicalLedger = [];
 let currentSelectedFY = "";
+let selectedClients = []; // Empty implies "All"
 
 function verifyGateSecurity() {
     if (document.getElementById('gateKey').value === CRYPTO_GATE_KEY) {
@@ -146,6 +168,19 @@ function verifyGateSecurity() {
 document.getElementById('gateKey').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') verifyGateSecurity();
 });
+
+// Close multi-select dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.multiselect-dropdown')) {
+        document.getElementById('multiselectOptions').style.display = 'none';
+    }
+});
+
+function toggleDropdown(e) {
+    e.stopPropagation();
+    const options = document.getElementById('multiselectOptions');
+    options.style.display = options.style.display === 'block' ? 'none' : 'block';
+}
 
 function fetchCloudLedger() {
     const scriptLedger = document.createElement('script');
@@ -168,11 +203,46 @@ function populateClientFilterDropdown() {
         let name = row.clientname || row.ClientName;
         if (name) clientSet.add(name.trim());
     });
-    const dropdown = document.getElementById('filtClient');
-    dropdown.innerHTML = '<option value="ALL">All Registered Clients</option>';
+    
+    const container = document.getElementById('multiselectOptions');
+    container.innerHTML = '';
+    selectedClients = [];
+    
     Array.from(clientSet).sort().forEach(client => {
-        dropdown.add(new Option(client, client));
+        let div = document.createElement('div');
+        div.className = 'multiselect-item';
+        div.innerHTML = `<input type="checkbox" value="${client}" onchange="onClientCheckboxChange()"> <span>${client}</span>`;
+        div.onclick = function(e) {
+            if(e.target.tagName !== 'INPUT') {
+                let cb = div.querySelector('input');
+                cb.checked = !cb.checked;
+                onClientCheckboxChange();
+            }
+        };
+        container.appendChild(div);
     });
+    updateMultiselectLabel();
+}
+
+function onClientCheckboxChange() {
+    let checkboxes = document.querySelectorAll('#multiselectOptions input');
+    selectedClients = [];
+    checkboxes.forEach(cb => {
+        if(cb.checked) selectedClients.push(cb.value.toLowerCase());
+    });
+    updateMultiselectLabel();
+    calculateAndRenderReports();
+}
+
+function updateMultiselectLabel() {
+    const label = document.getElementById('multiselectLabel');
+    if(selectedClients.length === 0) {
+        label.innerText = "All Registered Clients";
+    } else if(selectedClients.length === 1) {
+        label.innerText = "1 Client Selected";
+    } else {
+        label.innerText = `${selectedClients.length} Clients Comparing`;
+    }
 }
 
 function getIndianFinancialYear(dateStr) {
@@ -202,14 +272,12 @@ function dateStringIsolation(dateStr) {
 }
 
 function onSubFilterChange() {
-    // If Quarter or Client switches away from 'ALL', drop custom dates to prevent logical conflicts
     document.getElementById('filtStartDate').value = "";
     document.getElementById('filtEndDate').value = "";
     calculateAndRenderReports();
 }
 
 function onCustomDateChange() {
-    // If explicit custom date range is used, bypass the general Quarter selection box bounds
     document.getElementById('filtQuarter').value = "ALL";
     calculateAndRenderReports();
 }
@@ -244,12 +312,23 @@ function buildFinancialYearTabs() {
     });
 }
 
+function toggleDrawer(id) {
+    const drawer = document.getElementById(`drawer-${id}`);
+    const row = document.getElementById(`mainrow-${id}`);
+    if(drawer.style.display === 'table-row') {
+        drawer.style.display = 'none';
+        row.classList.remove('expanded');
+    } else {
+        drawer.style.display = 'table-row';
+        row.classList.add('expanded');
+    }
+}
+
 function calculateAndRenderReports() {
     let grossTotal = 0, netSubtotal = 0, totalGst = 0, totalTds = 0;
     let clientMetrics = {};
 
     const qFilter = document.getElementById('filtQuarter').value;
-    const cFilter = document.getElementById('filtClient').value.toLowerCase();
     const startDateVal = document.getElementById('filtStartDate').value;
     const endDateVal = document.getElementById('filtEndDate').value;
 
@@ -257,16 +336,13 @@ function calculateAndRenderReports() {
         let iDt = row.date || row.Date;
         if (!iDt) return;
 
-        // Level 1 Filter: Financial Year Match
         let rowFY = getIndianFinancialYear(iDt.toString());
         if (rowFY !== currentSelectedFY) return;
 
-        // Local Date parsing steps for exact sub-comparisons
-        let ISO_DateString = dateStringIsolation(iDt.toString()); // standardizes to YYYY-MM-DD
+        let ISO_DateString = dateStringIsolation(iDt.toString());
         let dateObj = new Date(ISO_DateString);
-        let month = dateObj.getMonth() + 1; // 1 = January, 12 = December
+        let month = dateObj.getMonth() + 1;
 
-        // Level 2 Sub-Filter A: Quarter Filtering Strategy
         if (qFilter !== "ALL") {
             if (qFilter === "Q1" && (month < 4 || month > 6)) return;
             if (qFilter === "Q2" && (month < 7 || month > 9)) return;
@@ -274,15 +350,13 @@ function calculateAndRenderReports() {
             if (qFilter === "Q4" && (month < 1 || month > 3)) return;
         }
 
-        // Level 2 Sub-Filter B: Client Filtering Strategy
+        // Multi-Select Client filter execution lane
         let rClient = row.clientname || row.ClientName || "";
-        if (cFilter !== "ALL" && rClient.trim().toLowerCase() !== cFilter) return;
+        if (selectedClients.length > 0 && !selectedClients.includes(rClient.trim().toLowerCase())) return;
 
-        // Level 2 Sub-Filter C: Custom Range Date Checking
         if (startDateVal && ISO_DateString < startDateVal) return;
         if (endDateVal && ISO_DateString > endDateVal) return;
 
-        // Collate Metrics
         let rowSubtotal = parseFloat(row.subtotal || (parseFloat(row.qty || 0) * parseFloat(row.unitprice || 0))) || 0;
         let rowGst = parseFloat(row.gstamount) || 0;
         let rowTds = parseFloat(row.tdsamount) || 0;
@@ -295,21 +369,30 @@ function calculateAndRenderReports() {
 
         let cName = rClient || "Unknown Client";
         if (!clientMetrics[cName]) {
-            clientMetrics[cName] = { jobs: 0, subtotal: 0, gst: 0, tds: 0 };
+            clientMetrics[cName] = { jobs: 0, subtotal: 0, gst: 0, tds: 0, items: [] };
         }
         clientMetrics[cName].jobs++;
         clientMetrics[cName].subtotal += rowSubtotal;
         clientMetrics[cName].gst += rowGst;
         clientMetrics[cName].tds += rowTds;
+        
+        // Save matching line details inside the group object context array
+        clientMetrics[cName].items.push({
+            invoiceNo: row.invoiceno || row.InvoiceNo || '—',
+            date: ISO_DateString.split('-').reverse().join('-'), // format to DD-MM-YYYY
+            jobCard: row.jobcard || row.JobCard || 'No JC',
+            desc: row.componentdescription || row.ComponentDescription || row.desc || '—',
+            qty: parseFloat(row.qty || 0),
+            price: parseFloat(row.unitprice || row.price || 0),
+            total: rowSubtotal
+        });
     });
 
-    // Render Metrics Cards
     document.getElementById('repGrossTurnover').innerText = "₹" + grossTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repNetAssessable').innerText = "₹" + netSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalGst').innerText = "₹" + totalGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalTds').innerText = "₹" + totalTds.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
-    // Build breakdown table body
     const tbody = document.getElementById('reportClientRows');
     tbody.innerHTML = "";
 
@@ -319,17 +402,60 @@ function calculateAndRenderReports() {
         return;
     }
 
-    clients.forEach(cName => {
+    clients.forEach((cName, idx) => {
         let metrics = clientMetrics[cName];
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><strong>${cName}</strong></td>
+        
+        // Row 1: The Main Aggregated Client Summary
+        let trMain = document.createElement('tr');
+        trMain.id = `mainrow-${idx}`;
+        trMain.className = "clickable-row";
+        trMain.onclick = () => toggleDrawer(idx);
+        trMain.innerHTML = `
+            <td><strong>📁 ${cName}</strong></td>
             <td class="text-right">${metrics.jobs}</td>
             <td class="text-right">₹${metrics.subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
             <td class="text-right">₹${metrics.gst.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
             <td class="text-right" style="color:#ef4444;">₹${metrics.tds.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
         `;
-        tbody.appendChild(tr);
+        tbody.appendChild(trMain);
+
+        // Row 2: The Collapsible Drawer contenant individual item breakdowns
+        let subRowsHtml = metrics.items.map(item => `
+            <tr>
+                <td><strong>${item.invoiceNo}</strong></td>
+                <td>${item.date}</td>
+                <td><small style="background:#e2e8f0;padding:2px 4px;border-radius:4px;">JC: ${item.jobCard}</small></td>
+                <td>${item.desc}</td>
+                <td class="text-right">${item.qty}</td>
+                <td class="text-right">₹${item.price.toFixed(2)}</td>
+                <td class="text-right"><strong>₹${item.total.toFixed(2)}</strong></td>
+            </tr>
+        `).join('');
+
+        let trDrawer = document.createElement('tr');
+        trDrawer.id = `drawer-${idx}`;
+        trDrawer.className = "drawer-row";
+        trDrawer.innerHTML = `
+            <td colspan="5" class="drawer-cell">
+                <div style="padding: 10px 15px; background: #fdfdfd; border-bottom: 1px solid #cbd5e1;">
+                    <table class="drawer-table">
+                        <thead>
+                            <tr>
+                                <th>Inv No</th>
+                                <th>Date</th>
+                                <th>Job Card</th>
+                                <th>Itemized Description</th>
+                                <th class="text-right">Qty</th>
+                                <th class="text-right">Unit Price</th>
+                                <th class="text-right">Subtotal Base</th>
+                            </tr>
+                        </thead>
+                        <tbody>${subRowsHtml}</tbody>
+                    </table>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(trDrawer);
     });
 }
 </script>
