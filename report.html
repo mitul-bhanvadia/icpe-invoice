@@ -391,10 +391,14 @@ function calculateAndRenderReports() {
         });
     });
 
+    let splitCgst = totalGst / 2;
+    let splitSgst = totalGst / 2;
+    
     document.getElementById('repGrossTurnover').innerText = "₹" + grossTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repNetAssessable').innerText = "₹" + netSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalGst').innerText = "₹" + totalGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalTds').innerText = "₹" + totalTds.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    
     document.getElementById('repCgst').innerText = "₹" + splitCgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repSgst').innerText = "₹" + splitSgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const tbody = document.getElementById('reportClientRows');
