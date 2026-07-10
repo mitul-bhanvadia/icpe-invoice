@@ -92,7 +92,10 @@
     </div>
 
     <div id="panelCreate">
-        <h3 id="panelHeader">⚡ ICPE Billing Engine</h3>
+        <h3 id="panelHeader">
+            <span>⚡ ICPE Billing Engine</span>
+            <button class="btn btn-alt" style="padding: 6px 12px; font-size: 12px; font-weight: 600;" onclick="manualDatabaseRefresh()">🔄 Sync Databases</button>
+        </h3>
         <div class="grid">
             <div>
                 <label>Target Client Profile</label>
@@ -797,7 +800,18 @@ function formatToDDMMYYYY(dateString) {
     }
     return dateString;
 }
-
+function manualDatabaseRefresh() {
+    // 1. Reset the structural race condition gate flags
+    clientsLoaded = false;
+    componentsLoaded = false;
+    
+    // 2. Clear out on-screen layout arrays to prevent append stacking
+    document.getElementById('uiClient').innerHTML = "<option>Refreshing data streams...</option>";
+    document.getElementById('itemRows').innerHTML = "";
+    
+    // 3. Re-inject script elements to bypass browser memory caching
+    loadExternalData();
+}
 function exportDesktopPDF() {
     // 1. Grab the current invoice number and date from the layout elements
     const invNum = document.getElementById('lblInvNo').innerText.trim().replace(/\//g, '/');
