@@ -124,7 +124,10 @@
         </div>
         <div class="card">
             <label style="text-transform: uppercase; font-size: 11px; color: #f59e0b;">Total GST Pool (CGST+SGST)</label>
-            <div id="repTotalGst" class="card-val" style="color: #f59e0b;">₹0.00</div>
+            <div id="repTotalGst" class="card-val" style="color: #f59e0b; font-size: 20px;">₹0.00</div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                (CGST: <span id="repCgst">₹0.00</span> + SGST: <span id="repSgst">₹0.00</span>)
+            </div>
         </div>
         <div class="card">
             <label style="text-transform: uppercase; font-size: 11px; color: #ef4444;">Withheld TDS Pool (194C)</label>
@@ -392,7 +395,8 @@ function calculateAndRenderReports() {
     document.getElementById('repNetAssessable').innerText = "₹" + netSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalGst').innerText = "₹" + totalGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     document.getElementById('repTotalTds').innerText = "₹" + totalTds.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
+    document.getElementById('repCgst').innerText = "₹" + splitCgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('repSgst').innerText = "₹" + splitSgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     const tbody = document.getElementById('reportClientRows');
     tbody.innerHTML = "";
 
