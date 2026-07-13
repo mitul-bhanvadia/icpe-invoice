@@ -497,6 +497,7 @@ function render() {
     let grandTotal = subtotal + cgst + sgst;
     let netPayable = Math.round(grandTotal - tds);
 
+// --- Replace the final section of your render() function with this ---
     document.getElementById('valSub').innerText = subtotal.toFixed(2);
     document.getElementById('valCgst').innerText = cgst.toFixed(2);
     document.getElementById('valSgst').innerText = sgst.toFixed(2);
@@ -504,21 +505,18 @@ function render() {
     document.getElementById('valPayable').innerText = netPayable.toFixed(2);
     document.getElementById('valWords').innerText = numToWords(netPayable) + " Only";
 
-const tdsDisplayElement = document.getElementById('lblTdsAmount');
-    if (tdsDisplayElement) 
-	{
-        const tdsRow = tdsDisplayElement.closest('tr');
-        if (tdsRow) 
-		{
-            if (tds > 0) 
-			{
-                tdsRow.style.display = "table-row";
-                tdsDisplayElement.innerText = `-${tds.toFixed(2)}`;
-            } else 
-			{
-                tdsRow.style.display = "none";
-                tdsDisplayElement.innerText = "0.00";
-            }
+    // Correctly target 'valTds' and handle row visibility safely
+    const tdsDisplayElement = document.getElementById('valTds');
+    if (tdsDisplayElement) {
+        // Find either a table row parent or fall back to the direct row wrapper container
+        const tdsRow = tdsDisplayElement.closest('tr') || tdsDisplayElement.parentElement;
+        
+        if (tds > 0) {
+            tdsRow.style.display = ""; // Restores original layout block style dynamically
+            tdsDisplayElement.innerText = `-${tds.toFixed(2)}`;
+        } else {
+            tdsRow.style.display = "none"; // Hides the row completely when TDS is 0%
+            tdsDisplayElement.innerText = "0.00";
         }
     }
 }
