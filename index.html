@@ -476,9 +476,11 @@ function render() {
             qty = parseFloat(row.querySelector('.row-qty').value) || 0;
             price = parseFloat(row.querySelector('.row-price').value) || 0;
             
-            // MATH BUG FIXED: Explicitly grab active user input rate strings for real-time overrides
             let gstRate = parseFloat(row.querySelector('.row-gst').value) || 18;
-            let tdsRate = parseFloat(row.querySelector('.row-tds').value) || 2;
+            
+            // FIX: Safely evaluate if input is blank (default to 2%) vs explicitly typed zero
+            let tdsInputStr = row.querySelector('.row-tds').value.trim();
+            let tdsRate = (tdsInputStr === "") ? 2 : (parseFloat(tdsInputStr) || 0);
 
             lineTotal = qty * price;
             subtotal += lineTotal;
@@ -499,9 +501,18 @@ function render() {
     document.getElementById('valCgst').innerText = cgst.toFixed(2);
     document.getElementById('valSgst').innerText = sgst.toFixed(2);
     document.getElementById('valTotal').innerText = grandTotal.toFixed(2);
-    document.getElementById('valTds').innerText = `-${tds.toFixed(2)}`;
     document.getElementById('valPayable').innerText = netPayable.toFixed(2);
     document.getElementById('valWords').innerText = numToWords(netPayable) + " Only";
+
+    // FIX: Dynamically show/hide the entire TDS table row based on the calculated value
+    const tdsRow = document.getElementById('valTds').closest('tr');
+    if (tds > 0) {
+        tdsRow.style.display = "table-row";
+        document.getElementById('valTds').innerText = `-${tds.toFixed(2)}`;
+    } else {
+        tdsRow.style.display = "none";
+        document.getElementById('valTds').innerText = "0.00";
+    }
 }
 
 function commitToCloudLedger() {
