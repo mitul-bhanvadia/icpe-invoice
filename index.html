@@ -504,14 +504,22 @@ function render() {
     document.getElementById('valPayable').innerText = netPayable.toFixed(2);
     document.getElementById('valWords').innerText = numToWords(netPayable) + " Only";
 
-    // FIX: Dynamically show/hide the entire TDS table row based on the calculated value
-    const tdsRow = document.getElementById('valTds').closest('tr');
-    if (tds > 0) {
-        tdsRow.style.display = "table-row";
-        document.getElementById('valTds').innerText = `-${tds.toFixed(2)}`;
-    } else {
-        tdsRow.style.display = "none";
-        document.getElementById('valTds').innerText = "0.00";
+const tdsDisplayElement = document.getElementById('lblTdsAmount');
+    if (tdsDisplayElement) 
+	{
+        const tdsRow = tdsDisplayElement.closest('tr');
+        if (tdsRow) 
+		{
+            if (tds > 0) 
+			{
+                tdsRow.style.display = "table-row";
+                tdsDisplayElement.innerText = `-${tds.toFixed(2)}`;
+            } else 
+			{
+                tdsRow.style.display = "none";
+                tdsDisplayElement.innerText = "0.00";
+            }
+        }
     }
 }
 
