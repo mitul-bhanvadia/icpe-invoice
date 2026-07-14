@@ -3,255 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ICPE ERP - Financial Reports Terminal</title>
+    <title>ICPE Sales Analytics Dashboard</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <style>
-        :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; }
+        :root { --primary: #0f172a; --accent: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #d97706; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #334155; }
         
-        .dashboard-container { max-width: 950px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        h2 { margin-top: 0; color: var(--primary); border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .analytics-container { max-width: 1200px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         
-        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #64748b; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 20px; }
+        .dashboard-title { margin: 0; color: var(--primary); font-size: 24px; display: flex; align-items: center; gap: 8px; }
         
-        /* Financial Year Tabs */
-        .fy-container { display: flex; gap: 8px; background: #f1f5f9; padding: 8px; border-radius: 8px; margin-bottom: 20px; width: fit-content; }
-        .fy-btn { background: white; border: 1px solid #cbd5e1; padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #64748b; transition: all 0.2s; }
+        .tab-btn { background: var(--accent); color: white; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 6px; text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+        
+        /* Filter Section Layout */
+        .filter-section-label { font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 6px; }
+        .fy-container { display: flex; gap: 8px; margin-bottom: 20px; }
+        .fy-btn { background: white; border: 1px solid #cbd5e1; padding: 8px 16px; font-size: 13px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #475569; }
         .fy-btn.active { background: #475569; color: white; border-color: #475569; }
-
-        /* Sub-Filter Controls Panel */
-        .filter-panel { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 25px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
-        select, input { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; height: 38px; background: white; }
-
-        /* Multi-Select Dropdown Container */
-        .multiselect-dropdown { position: relative; width: 100%; }
-        .multiselect-header { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; height: 38px; line-height: 20px; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .multiselect-options { display: none; position: absolute; top: 40px; left: 0; width: 100%; max-height: 200px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 5px 0; }
-        .multiselect-item { padding: 8px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
-        .multiselect-item:hover { background: #f1f5f9; }
-        .multiselect-item input { width: auto; height: auto; cursor: pointer; }
-
-        /* Metric Summary Cards Grid */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .card { background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: center; }
-        .card-val { font-size: 22px; font-weight: bold; color: var(--primary); margin-top: 5px; }
-
-        /* Table Formatting Layout */
-        .ui-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .ui-table th { background: #f1f5f9; text-align: left; padding: 12px 10px; font-size: 13px; color: #475569; border-bottom: 2px solid #cbd5e1; }
-        .ui-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 25px; }
+        label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #64748b; }
+        select, input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; background: white; }
+        
+        /* Custom Multi-Select Dropdown Container Elements */
+        .multi-select-dropdown { position: relative; width: 100%; }
+        .multi-select-trigger { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 13px; background: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .multi-select-options { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; max-height: 180px; overflow-y: auto; padding: 6px; margin-top: 2px; }
+        .multi-select-options.open { display: block; }
+        .option-item { display: flex; align-items: center; gap: 8px; padding: 6px; font-size: 13px; cursor: pointer; border-radius: 4px; }
+        .option-item:hover { background: #f1f5f9; }
+        .option-item input { width: auto; margin: 0; }
+        
+        /* Financial Summary Cards Grid Matrix Layout */
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .metric-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 18px 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: space-between; min-height: 95px; }
+        .metric-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-value { font-size: 22px; font-weight: 700; color: #0f172a; margin-top: 6px; }
+        
+        .card-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; border-top: 1px dashed #cbd5e1; padding-top: 6px; }
+        .card-table td { padding: 4px 0 0 0; color: #64748b; }
+        
+        /* Advanced Grouped Breakdown Summary Layout Section */
+        .section-heading { font-size: 16px; font-weight: 700; color: var(--primary); margin: 25px 0 15px 0; display: flex; align-items: center; gap: 6px; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        .report-table th { background: #f1f5f9; text-align: left; padding: 12px 10px; font-weight: 600; color: #475569; border-bottom: 2px solid #cbd5e1; }
+        
+        /* Master Group Context Row Items Row Alignment */
+        .master-row { background: #f8fafc; border-bottom: 1px solid #cbd5e1; font-weight: 600; cursor: pointer; transition: background 0.15s ease; }
+        .master-row:hover { background: #e2e8f0; }
+        .master-row td { padding: 14px 10px; color: var(--primary); }
+        .expander-icon { display: inline-block; width: 14px; font-size: 12px; color: var(--accent); transition: transform 0.2s; }
+        .master-row.open .expander-icon { transform: rotate(90deg); }
+        
+        /* Itemized Embedded Table Layer Row Style Blueprint */
+        .detail-wrapper-row { background: #ffffff; }
+        .detail-wrapper-row td { padding: 0 !important; }
+        .nested-container { padding: 10px 15px 20px 25px; background: #fafafa; border-bottom: 2px solid #cbd5e1; }
+        
+        .nested-table { width: 100%; border-collapse: collapse; font-size: 12px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 4px; overflow: hidden; }
+        .nested-table th { background: #f8fafc; color: #64748b; padding: 8px 10px; font-weight: 600; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+        .nested-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; color: #475569; }
+        .nested-table tr:last-child td { border-bottom: none; }
+        
         .text-right { text-align: right; }
-        
-        /* Interactive Row Styles */
-        .clickable-row { cursor: pointer; transition: background 0.2s; }
-        .clickable-row:hover { background: #f8fafc; }
-        .clickable-row.expanded { background: #f1f5f9; }
-        .drawer-row { display: none; background: #fafafa; }
-        .drawer-cell { padding: 0 !important; }
-        .drawer-table { width: 100%; border-collapse: collapse; background: #ffffff; }
-        .drawer-table th { background: #f8fafc; font-size: 11px; padding: 6px 10px; border-bottom: 1px solid #e2e8f0; color: #64748b; }
-        .drawer-table td { font-size: 12px; padding: 6px 10px; border-bottom: 1px dashed #e2e8f0; color: #475569; }
-        
-        /* Navigation Button Shortcut */
-        .nav-btn { background: var(--accent); color: white; text-decoration: none; padding: 8px 14px; font-size: 13px; font-weight: bold; border-radius: 6px; }
-        
-        #gatekeeper-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:99999; display:flex; justify-content:center; align-items:center; color:white; }
-        .gate-card { background:white; color:#334155; padding:30px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); width:320px; text-align:center; }
+        .hidden-element { display: none !important; }
+        #loading-overlay { text-align: center; padding: 40px; font-size: 16px; font-weight: bold; color: #64748b; }
     </style>
 </head>
 <body>
 
-<!-- SECURE PROTECTION GATE SHIELD -->
-<div id="gatekeeper-screen">
-    <div class="gate-card">
-        <h2 style="margin-top:0; color:#0f172a; border:none; justify-content:center;">🔐 Reports Portal</h2>
-        <p style="font-size:13px; color:#64748b; margin-bottom:15px;">Provide terminal authorization password keys to extract financial ledgers.</p>
-        <input type="password" id="gateKey" placeholder="Enter System Password" style="margin-bottom:15px; padding:12px; text-align:center;">
-        <button class="fy-btn active" style="width:100%; padding:12px; border-radius:6px;" onclick="verifyGateSecurity()">Unlock Dashboard</button>
-        <p id="gateErr" style="color:#ef4444; font-size:12px; font-weight:bold; margin-top:10px; display:none;">Invalid access credential.</p>
+<div class="analytics-container">
+    <div class="header-row">
+        <h2 class="dashboard-title">📈 ICPE Sales Analytics</h2>
+        <a href="index.html" class="tab-btn">⬅ Return to Billing</a>
     </div>
-</div>
 
-<div class="dashboard-container" id="mainDashboard" style="display:none;">
-    <h2>
-        <span>📈 ICPE Sales Analytics</span>
-        <a href="index.html" class="nav-btn">🔌 Return to Billing</a>
-    </h2>
-    
-    <label>1st Level Filter (Financial Cycle):</label>
-    <div class="fy-container" id="fyReportTabWrapper"></div>
+    <!-- 1st Level Filter (Financial Cycle) -->
+    <div class="filter-section-label">1st Level Filter (Financial Cycle):</div>
+    <div class="fy-container" id="fyTabWrapper"></div>
 
-    <label>2nd Level Sub-Filters:</label>
-    <div class="filter-panel">
+    <!-- 2nd Level Sub-Filters -->
+    <div class="filter-section-label">2nd Level Sub-Filters:</div>
+    <div class="filter-grid">
         <div>
-            <label>Quarterly Segment</label>
-            <select id="filtQuarter" onchange="onSubFilterChange()">
-                <option value="ALL">Full Financial Year (All)</option>
-                <option value="Q1">Q1 (Apr - Jun)</option>
+            <label>Period</label>
+            <select id="filterPeriod" onchange="processAnalyticsData()">
+                <option value="ALL">Full Financial Year</option>
+                <option value="Q1" selected>Q1 (Apr - Jun)</option>
                 <option value="Q2">Q2 (Jul - Sep)</option>
                 <option value="Q3">Q3 (Oct - Dec)</option>
                 <option value="Q4">Q4 (Jan - Mar)</option>
+                <option value="M4">April</option>
+                <option value="M5">May</option>
+                <option value="M6">June</option>
+                <option value="M7">July</option>
+                <option value="M8">August</option>
+                <option value="M9">September</option>
+                <option value="M10">October</option>
+                <option value="M11">November</option>
+                <option value="M12">December</option>
+                <option value="M1">January</option>
+                <option value="M2">February</option>
+                <option value="M3">March</option>
             </select>
         </div>
         <div>
-            <label>Filter by Client (Multi-Select)</label>
-            <div class="multiselect-dropdown">
-                <div class="multiselect-header" onclick="toggleDropdown(event)">
-                    <span id="multiselectLabel">All Registered Clients</span>
+            <label>Client (Multi-Select)</label>
+            <div class="multi-select-dropdown">
+                <div class="multi-select-trigger" onclick="toggleMultiSelectDropdown(event)">
+                    <span id="dropdownSelectedLabel">All Clients Selected</span>
                     <span>▼</span>
                 </div>
-                <div class="multiselect-options" id="multiselectOptions"></div>
+                <div class="multi-select-options" id="clientOptionsWrapper"></div>
             </div>
         </div>
         <div>
             <label>Custom Date From</label>
-            <input type="date" id="filtStartDate" onchange="onCustomDateChange()">
+            <input type="date" id="filterDateFrom" onchange="processAnalyticsData()">
         </div>
         <div>
             <label>Custom Date To</label>
-            <input type="date" id="filtEndDate" onchange="onCustomDateChange()">
+            <input type="date" id="filterDateTo" onchange="processAnalyticsData()">
         </div>
     </div>
 
-    <!-- Analytics Output Summary Dashboard Cards -->
-    <div class="grid">
-        <div class="card">
-            <label style="text-transform: uppercase; font-size: 11px;">Gross Turnover (Inc. GST)</label>
-            <div id="repGrossTurnover" class="card-val">₹0.00</div>
+    <!-- Financial Metrics Summary Cards Block Row Display Screen Area -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">Gross Turnover (Inc. GST)</div>
+            <div class="metric-value" id="cardTurnover">₹0.00</div>
         </div>
-        <div class="card">
-            <label style="text-transform: uppercase; font-size: 11px; color: var(--accent);">Assessable Subtotal Value</label>
-            <div id="repNetAssessable" class="card-val" style="color: var(--accent);">₹0.00</div>
+        <div class="metric-card">
+            <div class="metric-label">Assessable Subtotal Value</div>
+            <div class="metric-value" id="cardSubtotal" style="color: var(--accent);">₹0.00</div>
         </div>
-        <div class="card">
-            <label style="text-transform: uppercase; font-size: 11px; color: #f59e0b;">Total GST Pool (CGST+SGST)</label>
-            <div id="repTotalGst" class="card-val" style="color: #f59e0b; font-size: 20px;">₹0.00</div>
-            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
-                (CGST: <span id="repCgst">₹0.00</span> + SGST: <span id="repSgst">₹0.00</span>)
+        
+        <!-- Local Tax Cards configured with embedded Micro-Table parameters -->
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Total GST Pool (CGST+SGST)</div>
+                <div class="metric-value" id="cardLocalGst" style="color: var(--warning);">₹0.00</div>
             </div>
+            <table class="card-table">
+                <tr>
+                    <td id="microCgstLabel">(CGST: ₹0.00 + SGST: ₹0.00)</td>
+                </tr>
+            </table>
         </div>
-        <div class="card">
-            <label style="text-transform: uppercase; font-size: 11px; color: #ef4444;">Withheld TDS Pool (194C)</label>
-            <div id="repTotalTds" class="card-val" style="color: #ef4444;">₹0.00</div>
+        <div class="metric-card">
+            <div class="metric-label">Inter-State IGST Pool</div>
+            <div class="metric-value" id="cardInterGst" style="color: #6366f1;">₹0.00</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Withheld TDS Pool (194C)</div>
+            <div class="metric-value" id="cardTds" style="color: var(--danger);">₹0.00</div>
         </div>
     </div>
 
-    <h3 style="color: var(--primary); margin-bottom: 5px;">🏢 Client-Wise Breakdown Summary <span style="font-size:12px; font-weight:normal; color:#64748b;">(Click row to view itemized records)</span></h3>
-    <table class="ui-table">
-        <thead>
-            <tr>
-                <th>Client Business Entity</th>
-                <th class="text-right">Billed Items Count</th>
-                <th class="text-right">Subtotal Base (INR)</th>
-                <th class="text-right">GST Collected</th>
-                <th class="text-right">TDS Withheld</th>
-            </tr>
-        </thead>
-        <tbody id="reportClientRows"></tbody>
-    </table>
+    <!-- Client-Wise breakdown reporting canvas grid framework sheets -->
+    <div class="section-heading">🏢 Client-Wise Breakdown Summary <span style="font-weight:normal; font-size:12px; color:#64748b; margin-left:4px;">(Click row to view itemized records)</span></div>
+    
+    <div id="loading-overlay">Initializing secure live pipeline data assets...</div>
+    
+    <div id="reportContainer" style="display:none;">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Client Business Entity</th>
+                    <th style="width: 15%; text-align: center;">Billed Items Count</th>
+                    <th class="text-right" style="width: 18%;">Subtotal Base (INR)</th>
+                    <th class="text-right" style="width: 16%;">GST Collected</th>
+                    <th class="text-right" style="width: 16%;">TDS Withheld</th>
+                </tr>
+            </thead>
+            <tbody id="reportRows"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycby705eXum08yMMX4a3T2bOp8muLuBNK_mC-cNe0yFO85CstZ_LBG1X6QbWpcIKtkH6h9g/exec";
-const CRYPTO_GATE_KEY = "ICPE@2026";
+// --- CORE ERP DATABASE ENDPOINT VARIABLES ---
+const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpMxajHfz35cxrW-CEGRQxbdgXnFOi8TFZ-plGXy-FD3xo_EOSLYKwxbi1A_L6RVkdog/exec";
 
-let historicalLedger = [];
-let currentSelectedFY = "";
-let selectedClients = []; // Empty implies "All"
+let ledgerDataset = [];
+let selectedFY = "";
+let selectedClients = new Set();
 
-function verifyGateSecurity() {
-    if (document.getElementById('gateKey').value === CRYPTO_GATE_KEY) {
-        document.getElementById('gatekeeper-screen').style.display = "none";
-        document.getElementById('mainDashboard').style.display = "block";
-        fetchCloudLedger();
-    } else {
-        document.getElementById('gateErr').style.display = "block";
-    }
-}
-
-document.getElementById('gateKey').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') verifyGateSecurity();
-});
-
-// Close multi-select dropdown when clicking outside
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.multiselect-dropdown')) {
-        document.getElementById('multiselectOptions').style.display = 'none';
-    }
-});
-
-function toggleDropdown(e) {
+function toggleMultiSelectDropdown(e) {
     e.stopPropagation();
-    const options = document.getElementById('multiselectOptions');
-    options.style.display = options.style.display === 'block' ? 'none' : 'block';
+    document.getElementById('clientOptionsWrapper').classList.toggle('open');
 }
 
-function fetchCloudLedger() {
-    const scriptLedger = document.createElement('script');
-    scriptLedger.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleLedgerJsonpResponse`;
-    document.body.appendChild(scriptLedger);
+document.addEventListener('click', function() {
+    document.getElementById('clientOptionsWrapper').classList.remove('open');
+});
+
+function fetchFreshLedgerData() {
+    document.getElementById('loading-overlay').style.display = "block";
+    document.getElementById('reportContainer').style.display = "none";
+    
+    const oldScript = document.getElementById('report-jsonp-script');
+    if (oldScript) oldScript.remove();
+
+    const script = document.createElement('script');
+    script.id = 'report-jsonp-script';
+    script.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleReportLedgerResponse&nocache=${new Date().getTime()}`;
+    document.body.appendChild(script);
 }
 
-window.handleLedgerJsonpResponse = function(data) {
+window.handleReportLedgerResponse = function(data) {
     if (data && Array.isArray(data)) {
-        historicalLedger = data;
-        populateClientFilterDropdown();
-        buildFinancialYearTabs();
-        calculateAndRenderReports();
+        ledgerDataset = data;
+        buildFiscalYearTabs(data);
+        buildClientOptionsList(data);
+
+        document.getElementById('loading-overlay').style.display = "none";
+        document.getElementById('reportContainer').style.display = "block";
+        processAnalyticsData();
+    } else {
+        document.getElementById('loading-overlay').innerText = "Data fetch failed. Verify network assets.";
     }
 };
 
-function populateClientFilterDropdown() {
-    let clientSet = new Set();
-    historicalLedger.forEach(row => {
-        let name = row.clientname || row.ClientName;
-        if (name) clientSet.add(name.trim());
-    });
-    
-    const container = document.getElementById('multiselectOptions');
-    container.innerHTML = '';
-    selectedClients = [];
-    
-    Array.from(clientSet).sort().forEach(client => {
-        let div = document.createElement('div');
-        div.className = 'multiselect-item';
-        div.innerHTML = `<input type="checkbox" value="${client}" onchange="onClientCheckboxChange()"> <span>${client}</span>`;
-        div.onclick = function(e) {
-            if(e.target.tagName !== 'INPUT') {
-                let cb = div.querySelector('input');
-                cb.checked = !cb.checked;
-                onClientCheckboxChange();
-            }
-        };
-        container.appendChild(div);
-    });
-    updateMultiselectLabel();
-}
-
-function onClientCheckboxChange() {
-    let checkboxes = document.querySelectorAll('#multiselectOptions input');
-    selectedClients = [];
-    checkboxes.forEach(cb => {
-        if(cb.checked) selectedClients.push(cb.value.toLowerCase());
-    });
-    updateMultiselectLabel();
-    calculateAndRenderReports();
-}
-
-function updateMultiselectLabel() {
-    const label = document.getElementById('multiselectLabel');
-    if(selectedClients.length === 0) {
-        label.innerText = "All Registered Clients";
-    } else if(selectedClients.length === 1) {
-        label.innerText = "1 Client Selected";
-    } else {
-        label.innerText = `${selectedClients.length} Clients Comparing`;
-    }
-}
-
 function getIndianFinancialYear(dateStr) {
     if(!dateStr) return "";
-    let cleanDate = dateStringIsolation(dateStr);
-    let parts = cleanDate.split(/[-/]/);
+    let parts = dateStr.split('T')[0].split(/[-/]/);
     let y = parseInt(parts[0]), m = parseInt(parts[1]);
     if (parts[2] && parts[2].length === 4) { y = parseInt(parts[2]); m = parseInt(parts[1]); }
     if (m >= 1 && m <= 3) {
@@ -261,33 +238,9 @@ function getIndianFinancialYear(dateStr) {
     }
 }
 
-function dateStringIsolation(dateStr) {
-    let str = dateStr.toString().trim();
-    if (str.includes('T18:30:00') || str.includes('18:30:00')) {
-        const localObj = new Date(str);
-        if (!isNaN(localObj.getTime())) {
-            let day = String(localObj.getDate()).padStart(2, '0');
-            let month = String(localObj.getMonth() + 1).padStart(2, '0');
-            return `${localObj.getFullYear()}-${month}-${day}`;
-        }
-    }
-    return str.split('T')[0].trim();
-}
-
-function onSubFilterChange() {
-    document.getElementById('filtStartDate').value = "";
-    document.getElementById('filtEndDate').value = "";
-    calculateAndRenderReports();
-}
-
-function onCustomDateChange() {
-    document.getElementById('filtQuarter').value = "ALL";
-    calculateAndRenderReports();
-}
-
-function buildFinancialYearTabs() {
+function buildFiscalYearTabs(data) {
     let fySet = new Set();
-    historicalLedger.forEach(row => {
+    data.forEach(row => {
         let iDt = row.date || row.Date;
         if(iDt) {
             let fy = getIndianFinancialYear(iDt.toString());
@@ -295,177 +248,253 @@ function buildFinancialYearTabs() {
         }
     });
     fySet.add(getIndianFinancialYear(new Date().toISOString()));
-    let fyArray = Array.from(fySet).sort().reverse();
     
-    if(!currentSelectedFY) currentSelectedFY = fyArray[0];
+    let fyArray = Array.from(fySet).sort().reverse();
+    selectedFY = fyArray[0];
 
-    const wrapper = document.getElementById('fyReportTabWrapper');
+    const wrapper = document.getElementById('fyTabWrapper');
     wrapper.innerHTML = "";
     fyArray.forEach(fy => {
         let btn = document.createElement('button');
-        btn.className = `fy-btn ${fy === currentSelectedFY ? 'active' : ''}`;
+        btn.className = `fy-btn ${fy === selectedFY ? 'active' : ''}`;
         btn.innerText = fy;
         btn.onclick = function() {
-            document.querySelectorAll('.fy-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#fyTabWrapper .fy-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            currentSelectedFY = fy;
-            calculateAndRenderReports();
+            selectedFY = fy;
+            processAnalyticsData();
         };
         wrapper.appendChild(btn);
     });
 }
 
-function toggleDrawer(id) {
-    const drawer = document.getElementById(`drawer-${id}`);
-    const row = document.getElementById(`mainrow-${id}`);
-    if(drawer.style.display === 'table-row') {
-        drawer.style.display = 'none';
-        row.classList.remove('expanded');
-    } else {
-        drawer.style.display = 'table-row';
-        row.classList.add('expanded');
-    }
+function buildClientOptionsList(data) {
+    const box = document.getElementById('clientOptionsWrapper');
+    box.innerHTML = "";
+    selectedClients.clear();
+    
+    let clientNames = [...new Set(data.map(row => row.clientname || row.ClientName))].filter(Boolean).sort();
+    
+    clientNames.forEach(client => {
+        selectedClients.add(client);
+        let div = document.createElement('div');
+        div.className = "option-item";
+        div.onclick = (e) => e.stopPropagation();
+        div.innerHTML = `<input type="checkbox" value="${client}" checked class="client-chk-item"> <span>${client}</span>`;
+        
+        div.querySelector('input').onchange = function() {
+            if(this.checked) selectedClients.add(client);
+            else selectedClients.delete(client);
+            updateDropdownLabelCount();
+            processAnalyticsData();
+        };
+        
+        box.appendChild(div);
+    });
+    updateDropdownLabelCount();
 }
 
-function calculateAndRenderReports() {
-    let grossTotal = 0, netSubtotal = 0, totalGst = 0, totalTds = 0;
-    let clientMetrics = {};
+function updateDropdownLabelCount() {
+    const totalCount = document.querySelectorAll('.client-chk-item').length;
+    const trigger = document.getElementById('dropdownSelectedLabel');
+    if (selectedClients.size === totalCount) trigger.innerText = "All Clients Selected";
+    else if (selectedClients.size === 0) trigger.innerText = "0 Clients Selected";
+    else trigger.innerText = `${selectedClients.size} Client Selected`;
+}
 
-    const qFilter = document.getElementById('filtQuarter').value;
-    const startDateVal = document.getElementById('filtStartDate').value;
-    const endDateVal = document.getElementById('filtEndDate').value;
+function processAnalyticsData() {
+    const periodValue = document.getElementById('filterPeriod').value;
+    const customFrom = document.getElementById('filterDateFrom').value;
+    const customTo = document.getElementById('filterDateTo').value;
 
-    historicalLedger.forEach(row => {
-        let iDt = row.date || row.Date;
-        if (!iDt) return;
-
-        let rowFY = getIndianFinancialYear(iDt.toString());
-        if (rowFY !== currentSelectedFY) return;
-
-        let ISO_DateString = dateStringIsolation(iDt.toString());
-        let dateObj = new Date(ISO_DateString);
-        let month = dateObj.getMonth() + 1;
-
-        if (qFilter !== "ALL") {
-            if (qFilter === "Q1" && (month < 4 || month > 6)) return;
-            if (qFilter === "Q2" && (month < 7 || month > 9)) return;
-            if (qFilter === "Q3" && (month < 10 || month > 12)) return;
-            if (qFilter === "Q4" && (month < 1 || month > 3)) return;
-        }
-
-        // Multi-Select Client filter execution lane
-        let rClient = row.clientname || row.ClientName || "";
-        if (selectedClients.length > 0 && !selectedClients.includes(rClient.trim().toLowerCase())) return;
-
-        if (startDateVal && ISO_DateString < startDateVal) return;
-        if (endDateVal && ISO_DateString > endDateVal) return;
-
-        let rowSubtotal = parseFloat(row.subtotal || (parseFloat(row.qty || 0) * parseFloat(row.unitprice || 0))) || 0;
-        let rowGst = parseFloat(row.gstamount) || 0;
-        let rowTds = parseFloat(row.tdsamount) || 0;
-        let rowGross = rowSubtotal + rowGst;
-
-        grossTotal += rowGross;
-        netSubtotal += rowSubtotal;
-        totalGst += rowGst;
-        totalTds += rowTds;
-
-        let cName = rClient || "Unknown Client";
-        if (!clientMetrics[cName]) {
-            clientMetrics[cName] = { jobs: 0, subtotal: 0, gst: 0, tds: 0, items: [] };
-        }
-        clientMetrics[cName].jobs++;
-        clientMetrics[cName].subtotal += rowSubtotal;
-        clientMetrics[cName].gst += rowGst;
-        clientMetrics[cName].tds += rowTds;
-        
-        // Save matching line details inside the group object context array
-        clientMetrics[cName].items.push({
-            invoiceNo: row.invoiceno || row.InvoiceNo || '—',
-            date: ISO_DateString.split('-').reverse().join('-'), // format to DD-MM-YYYY
-            jobCard: row.jobcard || row.JobCard || 'No JC',
-            desc: row.componentdescription || row.ComponentDescription || row.desc || '—',
-            qty: parseFloat(row.qty || 0),
-            price: parseFloat(row.unitprice || row.price || 0),
-            total: rowSubtotal
-        });
-    });
-
-    let splitCgst = totalGst / 2;
-    let splitSgst = totalGst / 2;
-    
-    document.getElementById('repGrossTurnover').innerText = "₹" + grossTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('repNetAssessable').innerText = "₹" + netSubtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('repTotalGst').innerText = "₹" + totalGst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('repTotalTds').innerText = "₹" + totalTds.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    
-    document.getElementById('repCgst').innerText = "₹" + splitCgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    document.getElementById('repSgst').innerText = "₹" + splitSgst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    const tbody = document.getElementById('reportClientRows');
+    const tbody = document.getElementById('reportRows');
     tbody.innerHTML = "";
 
-    let clients = Object.keys(clientMetrics);
-    if (clients.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#64748b;font-style:italic;padding:15px;">No transactions found matching your active filter criteria.</td></tr>`;
-        return;
+    let totalSubtotal = 0, totalCgst = 0, totalSgst = 0, totalIgst = 0, totalTds = 0;
+    let clientAggregationMap = {};
+
+    let fromTime = customFrom ? new Date(customFrom).getTime() : 0;
+    let toTime = customTo ? new Date(customTo).getTime() + 86400000 : Infinity;
+
+    ledgerDataset.forEach(row => {
+        let rawDateStr = row.date || '';
+        if (!rawDateStr) return;
+        
+        let rowDateObj = new Date(rawDateStr.toString().split('T')[0]);
+        let rowTime = rowDateObj.getTime();
+        let rowFY = getIndianFinancialYear(rawDateStr.toString());
+        
+        // 1st Level Financial Cycle selection validation
+        if (rowFY !== selectedFY) return;
+
+        let parts = rawDateStr.toString().split('T')[0].split(/[-/]/);
+        let m = parseInt(parts[1]);
+        if (parts[2] && parts[2].length === 4) { m = parseInt(parts[1]); }
+
+        // 2nd Level Period criteria evaluation checks
+        if (periodValue.startsWith('Q')) {
+            if (periodValue === 'Q1' && (m < 4 || m > 6)) return;
+            if (periodValue === 'Q2' && (m < 7 || m > 9)) return;
+            if (periodValue === 'Q3' && (m < 10 || m > 12)) return;
+            if (periodValue === 'Q4' && (m < 1 || m > 3)) return;
+        } else if (periodValue.startsWith('M')) {
+            let targetMonth = parseInt(periodValue.replace('M', ''));
+            if (m !== targetMonth) return;
+        }
+
+        // Custom chronological sub-date constraint blocks checks
+        if (customFrom && rowTime < fromTime) return;
+        if (customTo && rowTime > toTime) return;
+
+        // Multi-select client profiles filter validation mapping
+        let rowClient = row.clientname || '';
+        if (!selectedClients.has(rowClient)) return;
+
+        let qty = parseFloat(row.qty || 0);
+        let unitPrice = parseFloat(row.unitprice || 0);
+        let subtotal = parseFloat(row.subtotal || (qty * unitPrice));
+        let cgst = parseFloat(row.cgst || 0);
+        let sgst = parseFloat(row.sgst || 0);
+        let igst = parseFloat(row.igst || 0);
+        let tds = parseFloat(row.tdsamount || row.tds || 0);
+
+        if (!clientAggregationMap[rowClient]) {
+            clientAggregationMap[rowClient] = { clientName: rowClient, count: 0, subtotal: 0, gst: 0, tds: 0, items: [] };
+        }
+
+        clientAggregationMap[rowClient].count++;
+        clientAggregationMap[rowClient].subtotal += subtotal;
+        clientAggregationMap[rowClient].gst += (cgst + sgst + igst);
+        clientAggregationMap[rowClient].tds += tds;
+        
+        clientAggregationMap[rowClient].items.push({
+            invoiceNo: row.invoiceno || row.InvoiceNo || '-',
+            date: rawDateStr,
+            jobCard: row.jobcard || 'No JC',
+            desc: row.componentdescription || 'Job Work',
+            qty: qty,
+            price: unitPrice,
+            total: subtotal
+        });
+
+        totalSubtotal += subtotal;
+        totalCgst += cgst;
+        totalSgst += sgst;
+        totalIgst += igst;
+        totalTds += tds;
+    });
+
+    let groupedEntities = Object.keys(clientAggregationMap).sort();
+    if (groupedEntities.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:35px; color:#64748b; font-style:italic;">No logged transactional summaries match the filter parameters.</td></tr>`;
     }
 
-    clients.forEach((cName, idx) => {
-        let metrics = clientMetrics[cName];
+    groupedEntities.forEach((clientKey, index) => {
+        let dataPack = clientAggregationMap[clientKey];
         
-        // Row 1: The Main Aggregated Client Summary
-        let trMain = document.createElement('tr');
-        trMain.id = `mainrow-${idx}`;
-        trMain.className = "clickable-row";
-        trMain.onclick = () => toggleDrawer(idx);
-        trMain.innerHTML = `
-            <td><strong>📁 ${cName}</strong></td>
-            <td class="text-right">${metrics.jobs}</td>
-            <td class="text-right">₹${metrics.subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-            <td class="text-right">₹${metrics.gst.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-            <td class="text-right" style="color:#ef4444;">₹${metrics.tds.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+        let masterTr = document.createElement('tr');
+        masterTr.className = 'master-row';
+        masterTr.setAttribute('id', `master-entity-${index}`);
+        masterTr.onclick = () => toggleClientAccordionView(index);
+        masterTr.innerHTML = `
+            <td><span class="expander-icon" id="exp-icon-${index}">▶</span> <strong>${dataPack.clientName}</strong></td>
+            <td style="text-align: center;">${dataPack.count}</td>
+            <td class="text-center">₹${dataPack.subtotal.toFixed(2)}</td>
+            <td class="text-center">₹${dataPack.gst.toFixed(2)}</td>
+            <td class="text-center" style="color:var(--danger);">₹${dataPack.tds.toFixed(2)}</td>
         `;
-        tbody.appendChild(trMain);
+        tbody.appendChild(masterTr);
 
-        // Row 2: The Collapsible Drawer contenant individual item breakdowns
-        let subRowsHtml = metrics.items.map(item => `
-            <tr>
+        // Embedded itemized data table structural wrapper block layer setup
+        let wrapperTr = document.createElement('tr');
+        wrapperTr.className = 'detail-wrapper-row hidden-element';
+        wrapperTr.setAttribute('id', `child-detail-${index}`);
+        
+        let wrapperTd = document.createElement('td');
+        wrapperTd.setAttribute('colspan', '5');
+        
+        let nestedContainer = document.createElement('div');
+        nestedContainer.className = 'nested-container';
+        
+        let nestedTable = document.createElement('table');
+        nestedTable.className = 'nested-table';
+        nestedTable.innerHTML = `
+            <thead>
+                <tr>
+                    <th style="width:12%">Inv No</th>
+                    <th style="width:12%">Date</th>
+                    <th style="width:14%">Job Card</th>
+                    <th style="width:36%">Itemized Description</th>
+                    <th class="text-right" style="width:8%">Qty</th>
+                    <th class="text-right" style="width:10%">Unit Price</th>
+                    <th class="text-right" style="width:12%">Subtotal Base</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+        
+        let nestedTbody = nestedTable.querySelector('tbody');
+        dataPack.items.forEach(item => {
+            let itemTr = document.createElement('tr');
+            itemTr.innerHTML = `
                 <td><strong>${item.invoiceNo}</strong></td>
-                <td>${item.date}</td>
-                <td><small style="background:#e2e8f0;padding:2px 4px;border-radius:4px;">JC: ${item.jobCard}</small></td>
+                <td>${formatToDDMMYYYY(item.date)}</td>
+                <td><small style="background:#e2e8f0; padding:2px 4px; border-radius:4px; color:#475569;">JC: ${item.jobCard}</small></td>
                 <td>${item.desc}</td>
-                <td class="text-right">${item.qty}</td>
-                <td class="text-right">₹${item.price.toFixed(2)}</td>
-                <td class="text-right"><strong>₹${item.total.toFixed(2)}</strong></td>
-            </tr>
-        `).join('');
-
-        let trDrawer = document.createElement('tr');
-        trDrawer.id = `drawer-${idx}`;
-        trDrawer.className = "drawer-row";
-        trDrawer.innerHTML = `
-            <td colspan="5" class="drawer-cell">
-                <div style="padding: 10px 15px; background: #fdfdfd; border-bottom: 1px solid #cbd5e1;">
-                    <table class="drawer-table">
-                        <thead>
-                            <tr>
-                                <th>Inv No</th>
-                                <th>Date</th>
-                                <th>Job Card</th>
-                                <th>Itemized Description</th>
-                                <th class="text-right">Qty</th>
-                                <th class="text-right">Unit Price</th>
-                                <th class="text-right">Subtotal Base</th>
-                            </tr>
-                        </thead>
-                        <tbody>${subRowsHtml}</tbody>
-                    </table>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(trDrawer);
+                <td class="text-center">${item.qty}</td>
+                <td class="text-center">₹${item.price.toFixed(2)}</td>
+                <td class="text-center" style="font-weight:600;">₹${item.total.toFixed(2)}</td>
+            `;
+            nestedTbody.appendChild(itemTr);
+        });
+        
+        nestedContainer.appendChild(nestedTable);
+        wrapperTd.appendChild(nestedContainer);
+        wrapperTr.appendChild(wrapperTd);
+        tbody.appendChild(wrapperTr);
     });
+
+    // Update global widgets blocks
+    let overallGstPool = totalCgst + totalSgst + totalIgst;
+    let crossTurnover = totalSubtotal + overallGstPool;
+
+    document.getElementById('cardTurnover').innerText = `₹${crossTurnover.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('cardSubtotal').innerText = `₹${totalSubtotal.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('cardLocalGst').innerText = `₹${(totalCgst + totalSgst).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('cardInterGst').innerText = `₹${totalIgst.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    document.getElementById('cardTds').innerText = `₹${totalTds.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    
+    document.getElementById('microCgstLabel').innerText = `(CGST: ₹${totalCgst.toLocaleString('en-IN', {minimumFractionDigits:2})} + SGST: ₹${totalSgst.toLocaleString('en-IN', {minimumFractionDigits:2})})`;
 }
+
+function toggleClientAccordionView(idx) {
+    const master = document.getElementById(`master-entity-${idx}`);
+    const detail = document.getElementById(`child-detail-${idx}`);
+    const icon = document.getElementById(`exp-icon-${idx}`);
+    
+    if (detail.classList.contains('hidden-element')) {
+        detail.classList.remove('hidden-element');
+        master.classList.add('open');
+        icon.innerText = "▼";
+    } else {
+        detail.classList.add('hidden-element');
+        master.classList.remove('open');
+        icon.innerText = "▶";
+    }
+}
+
+function formatToDDMMYYYY(dStr) {
+    if(!dStr || dStr === "-") return "-";
+    let datePart = dStr.toString().split('T')[0];
+    let p = datePart.split(/[-/]/);
+    if(p.length !== 3) return dStr;
+    if(p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`;
+    return dStr;
+}
+
+window.onload = function() {
+    fetchFreshLedgerData();
+};
 </script>
 </body>
 </html>
