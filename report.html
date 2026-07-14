@@ -431,9 +431,9 @@ function processAnalyticsData() {
         masterTr.innerHTML = `
             <td><span class="expander-icon" id="exp-icon-${index}">▶</span> <strong>${dataPack.clientName}</strong></td>
             <td style="text-align: center;">${dataPack.count}</td>
-            <td class="text-right">₹${dataPack.subtotal.toFixed(2)}</td>
-            <td class="text-right">₹${dataPack.gst.toFixed(2)}</td>
-            <td class="text-right" style="color:var(--danger);">₹${dataPack.tds.toFixed(2)}</td>
+            <td class="text-center">₹${dataPack.subtotal.toFixed(2)}</td>
+            <td class="text-center">₹${dataPack.gst.toFixed(2)}</td>
+            <td class="text-center" style="color:var(--danger);">₹${dataPack.tds.toFixed(2)}</td>
         `;
         tbody.appendChild(masterTr);
 
@@ -472,9 +472,9 @@ function processAnalyticsData() {
                 <td>${formatToDDMMYYYY(item.date)}</td>
                 <td><small style="background:#e2e8f0; padding:2px 4px; border-radius:4px; color:#475569;">JC: ${item.jobCard}</small></td>
                 <td>${item.desc}</td>
-                <td class="text-right">${item.qty}</td>
-                <td class="text-right">₹${item.price.toFixed(2)}</td>
-                <td class="text-right" style="font-weight:600;">₹${item.total.toFixed(2)}</td>
+                <td class="text-center">${item.qty}</td>
+                <td class="text-center">₹${item.price.toFixed(2)}</td>
+                <td class="text-center" style="font-weight:600;">₹${item.total.toFixed(2)}</td>
             `;
             nestedTbody.appendChild(itemTr);
         });
