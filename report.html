@@ -15,6 +15,11 @@
         .dashboard-title { margin: 0; color: var(--primary); font-size: 24px; display: flex; align-items: center; gap: 8px; }
         
         .tab-btn { background: var(--accent); color: white; border: none; padding: 8px 16px; font-weight: bold; cursor: pointer; border-radius: 6px; text-decoration: none; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-alt { background: #475569; }
+
+        /* Security Gate Shield Overlay matching index.html */
+        #gatekeeper-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:99999; display:flex; justify-content:center; align-items:center; color:white; }
+        .gate-card { background:white; color:#334155; padding:30px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.3); width:320px; text-align:center; }
         
         /* Filter Section Layout */
         .filter-section-label { font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 6px; }
@@ -73,10 +78,25 @@
 </head>
 <body>
 
-<div class="analytics-container">
+<!-- Security Gate Shield Overlay Screen[cite: 1] -->
+<div id="gatekeeper-screen">
+    <div class="gate-card">
+        <h2 style="margin-top:0; color:#0f172a;">🔐 ICPE Protected Gate</h2>
+        <p style="font-size:13px; color:#64748b;">Please supply authentic gate access key credentials to release database modules.</p>
+        <input type="password" id="gateKey" placeholder="Enter Password Key" style="margin-bottom:15px; padding:12px; text-align:center; box-sizing: border-box; width: 100%;">
+        <button class="tab-btn" style="width:100%; padding:12px; justify-content: center;" onclick="verifyGateSecurity()">Unlock Terminal</button>
+        <p id="gateErr" style="color:#ef4444; font-size:12px; font-weight:bold; margin-top:10px; display:none;">Invalid access code credential.</p>
+    </div>
+</div>
+
+<div class="analytics-container" id="mainAppLayout" style="display:none;">
     <div class="header-row">
         <h2 class="dashboard-title">📈 ICPE Sales Analytics</h2>
-        <a href="index.html" class="tab-btn">⬅ Return to Billing</a>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <!-- Synced Action Elements Container Bar -->
+            <button class="tab-btn btn-alt" style="padding: 8px 16px; font-size: 14px;" onclick="fetchFreshLedgerData()">🔄 Sync Databases</button>
+            <a href="index.html" class="tab-btn">⬅ Return to Billing</a>
+        </div>
     </div>
 
     <!-- 1st Level Filter (Financial Cycle) -->
@@ -87,7 +107,7 @@
     <div class="filter-section-label">2nd Level Sub-Filters:</div>
     <div class="filter-grid">
         <div>
-            <label>Period</label>
+            <label>Quarterly Segment / Operational Month</label>
             <select id="filterPeriod" onchange="processAnalyticsData()">
                 <option value="ALL">Full Financial Year</option>
                 <option value="Q1" selected>Q1 (Apr - Jun)</option>
@@ -109,7 +129,7 @@
             </select>
         </div>
         <div>
-            <label>Client (Multi-Select)</label>
+            <label>Filter by Client (Multi-Select)</label>
             <div class="multi-select-dropdown">
                 <div class="multi-select-trigger" onclick="toggleMultiSelectDropdown(event)">
                     <span id="dropdownSelectedLabel">All Clients Selected</span>
@@ -128,7 +148,7 @@
         </div>
     </div>
 
-    <!-- Financial Metrics Summary Cards Block Row Display Screen Area -->
+    <!-- Financial Metrics Summary Cards -->
     <div class="metrics-grid">
         <div class="metric-card">
             <div class="metric-label">Gross Turnover (Inc. GST)</div>
@@ -138,8 +158,6 @@
             <div class="metric-label">Assessable Subtotal Value</div>
             <div class="metric-value" id="cardSubtotal" style="color: var(--accent);">₹0.00</div>
         </div>
-        
-        <!-- Local Tax Cards configured with embedded Micro-Table parameters -->
         <div class="metric-card">
             <div>
                 <div class="metric-label">Total GST Pool (CGST+SGST)</div>
@@ -161,7 +179,7 @@
         </div>
     </div>
 
-    <!-- Client-Wise breakdown reporting canvas grid framework sheets -->
+    <!-- Client-Wise Breakdown Summary -->
     <div class="section-heading">🏢 Client-Wise Breakdown Summary <span style="font-weight:normal; font-size:12px; color:#64748b; margin-left:4px;">(Click row to view itemized records)</span></div>
     
     <div id="loading-overlay">Initializing secure live pipeline data assets...</div>
@@ -189,6 +207,24 @@ const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpMxaj
 let ledgerDataset = [];
 let selectedFY = "";
 let selectedClients = new Set();
+
+const CRYPTO_GATE_KEY = "ICPE@2026"; //[cite: 1]
+
+// Security authorization function identical to index.html logic[cite: 1]
+function verifyGateSecurity() {
+    const inputVal = document.getElementById('gateKey').value;
+    if (inputVal === CRYPTO_GATE_KEY) {
+        document.getElementById('gatekeeper-screen').style.display = "none";
+        document.getElementById('mainAppLayout').style.display = "block";
+        fetchFreshLedgerData();
+    } else {
+        document.getElementById('gateErr').style.display = "block";
+    }
+}
+
+document.getElementById('gateKey').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') verifyGateSecurity();
+});
 
 function toggleMultiSelectDropdown(e) {
     e.stopPropagation();
@@ -324,14 +360,12 @@ function processAnalyticsData() {
         let rowTime = rowDateObj.getTime();
         let rowFY = getIndianFinancialYear(rawDateStr.toString());
         
-        // 1st Level Financial Cycle selection validation
         if (rowFY !== selectedFY) return;
 
         let parts = rawDateStr.toString().split('T')[0].split(/[-/]/);
         let m = parseInt(parts[1]);
         if (parts[2] && parts[2].length === 4) { m = parseInt(parts[1]); }
 
-        // 2nd Level Period criteria evaluation checks
         if (periodValue.startsWith('Q')) {
             if (periodValue === 'Q1' && (m < 4 || m > 6)) return;
             if (periodValue === 'Q2' && (m < 7 || m > 9)) return;
@@ -342,11 +376,9 @@ function processAnalyticsData() {
             if (m !== targetMonth) return;
         }
 
-        // Custom chronological sub-date constraint blocks checks
         if (customFrom && rowTime < fromTime) return;
         if (customTo && rowTime > toTime) return;
 
-        // Multi-select client profiles filter validation mapping
         let rowClient = row.clientname || '';
         if (!selectedClients.has(rowClient)) return;
 
@@ -399,13 +431,12 @@ function processAnalyticsData() {
         masterTr.innerHTML = `
             <td><span class="expander-icon" id="exp-icon-${index}">▶</span> <strong>${dataPack.clientName}</strong></td>
             <td style="text-align: center;">${dataPack.count}</td>
-            <td class="text-center">₹${dataPack.subtotal.toFixed(2)}</td>
-            <td class="text-center">₹${dataPack.gst.toFixed(2)}</td>
-            <td class="text-center" style="color:var(--danger);">₹${dataPack.tds.toFixed(2)}</td>
+            <td class="text-right">₹${dataPack.subtotal.toFixed(2)}</td>
+            <td class="text-right">₹${dataPack.gst.toFixed(2)}</td>
+            <td class="text-right" style="color:var(--danger);">₹${dataPack.tds.toFixed(2)}</td>
         `;
         tbody.appendChild(masterTr);
 
-        // Embedded itemized data table structural wrapper block layer setup
         let wrapperTr = document.createElement('tr');
         wrapperTr.className = 'detail-wrapper-row hidden-element';
         wrapperTr.setAttribute('id', `child-detail-${index}`);
@@ -441,9 +472,9 @@ function processAnalyticsData() {
                 <td>${formatToDDMMYYYY(item.date)}</td>
                 <td><small style="background:#e2e8f0; padding:2px 4px; border-radius:4px; color:#475569;">JC: ${item.jobCard}</small></td>
                 <td>${item.desc}</td>
-                <td class="text-center">${item.qty}</td>
-                <td class="text-center">₹${item.price.toFixed(2)}</td>
-                <td class="text-center" style="font-weight:600;">₹${item.total.toFixed(2)}</td>
+                <td class="text-right">${item.qty}</td>
+                <td class="text-right">₹${item.price.toFixed(2)}</td>
+                <td class="text-right" style="font-weight:600;">₹${item.total.toFixed(2)}</td>
             `;
             nestedTbody.appendChild(itemTr);
         });
@@ -454,7 +485,6 @@ function processAnalyticsData() {
         tbody.appendChild(wrapperTr);
     });
 
-    // Update global widgets blocks
     let overallGstPool = totalCgst + totalSgst + totalIgst;
     let crossTurnover = totalSubtotal + overallGstPool;
 
@@ -491,10 +521,6 @@ function formatToDDMMYYYY(dStr) {
     if(p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`;
     return dStr;
 }
-
-window.onload = function() {
-    fetchFreshLedgerData();
-};
 </script>
 </body>
 </html>
