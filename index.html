@@ -32,9 +32,9 @@
         .ui-table th { background: #f8fafc; text-align: left; padding: 10px; font-size: 13px; color: #64748b; }
         .ui-table td { padding: 8px 4px; }
         
-        .btn { background: var(--accent); color: white; border: none; padding: 10px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn { background: var(--accent); color: white; border: none; padding: 10px 16px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
         .btn-danger { background: #ef4444; }
-        .btn-success { background: var(--success); width: 100%; padding: 12px; font-size: 16px; margin-top: 10px; }
+        .btn-success { background: var(--success); width: 100%; padding: 12px; font-size: 16px; margin-top: 10px; justify-content: center; }
         .btn-alt { background: #475569; margin-right: 5px; }
         
         /* Viewer List Format */
@@ -50,7 +50,7 @@
         .company-title { font-size: 20px; font-weight: bold; margin: 0; }
         .inv-type-badge { border: 1px solid #000; padding: 4px 10px; font-weight: bold; font-size: 11px; text-transform: uppercase; align-self: flex-start; }
         .meta-table, .item-table { width: 100%; border-collapse: collapse; margin-top: 12px; table-layout: fixed; }
-        .meta-table td { border: 1px solid #000; padding: 6px; vertical-align: top; width: 50%; word-break: break-all; }
+        .meta-table td { border: 1px solid #000; padding: 9px; vertical-align: top; width: 50%; word-break: break-all; }
         .item-table th, .item-table td { border: 1px solid #000; padding: 6px; word-wrap: break-word; }
         .item-table th { background: #f1f5f9; text-align: left; }
         .text-right { text-align: right; }
@@ -66,8 +66,9 @@
         }
         @media print {
             @page { size: A4 portrait; margin: 15mm 10mm; }
-            .no-print { display: none !important; }
-            #print-area { width: 100% !important; padding: 0 !important; box-shadow: none !important; }
+            .no-print, #gatekeeper-screen, script { display: none !important; }
+            body, html { background: white !important; padding: 0 !important; margin: 0 !important; }
+            #print-area { width: 100% !important; padding: 0 !important; box-shadow: none !important; margin: 0 !important; }
         }
     </style>
 </head>
@@ -77,8 +78,8 @@
     <div class="gate-card">
         <h2 style="margin-top:0; color:#0f172a;">🔐 ICPE Protected Gate</h2>
         <p style="font-size:13px; color:#64748b;">Please supply authentic gate access key credentials to release database modules.</p>
-        <input type="password" id="gateKey" placeholder="Enter System Password" style="margin-bottom:15px; padding:12px; text-align:center;">
-        <button class="btn" style="width:100%; padding:12px;" onclick="verifyGateSecurity()">Unlock Terminal</button>
+        <input type="password" id="gateKey" placeholder="Enter Password Key" style="margin-bottom:15px; padding:12px; text-align:center; box-sizing: border-box; width: 100%;">
+        <button class="btn" style="width:100%; padding:12px; justify-content: center;" onclick="verifyGateSecurity()">Unlock Terminal</button>
         <p id="gateErr" style="color:#ef4444; font-size:12px; font-weight:bold; margin-top:10px; display:none;">Invalid access code credential.</p>
     </div>
 </div>
@@ -87,7 +88,7 @@
     <div class="tab-box">
         <button class="tab-btn active" id="tabCreate" onclick="switchTab('CREATE')">＋ Create New Invoice</button>
         <button class="tab-btn" id="tabView" onclick="switchTab('VIEW')">🔍 Historical Records Viewer</button>
-        <a href="report.html" class="tab-btn" style="text-decoration:none; display:inline-block; align-content:center;">📊 Sales Reports</a>
+        <a href="report.html" class="tab-btn" style="text-decoration:none; display:inline-flex; align-items:center;">📊 Sales Reports</a>
         <button class="tab-btn btn-view-mode" id="btnExitView" onclick="exitViewMode()">⚠️ Exit View Mode</button>
     </div>
 
@@ -127,11 +128,11 @@
             <thead>
                 <tr>
                     <th style="width:45%">Component / Jobwork Variant</th>
-                    <th style="width:15%">Qty</th>
+                    <th style="width:12%">Qty</th>
                     <th style="width:15%">Unit Price</th>
-                    <th style="width:10%">GST %</th>
+                    <th style="width:12%">GST %</th>
                     <th style="width:10%">TDS %</th>
-                    <th style="width:5%"></th>
+                    <th style="width:6%"></th>
                 </tr>
             </thead>
             <tbody id="itemRows"></tbody>
@@ -139,18 +140,15 @@
         
         <div style="display: flex; gap: 10px;">
             <button class="btn btn-alt" id="btnAddLine" onclick="addNewRow()">＋ Add Line Item</button>
-            <button class="btn" style="background:#4f46e5" onclick="exportDesktopPDF()">I Perfect PDF/Print</button>
+            <button class="btn" style="background:#4f46e5" onclick="exportDesktopPDF()">🖨️ Perfect PDF/Print</button>
         </div>
         <button class="btn btn-success" id="btnPostCloud" onclick="commitToCloudLedger()">☁️ Post Transaction to Cloud Ledger</button>
     </div>
 
     <div id="panelView" style="display:none;">
         <h3>📜 Closed Ledger Audit Records</h3>
-        
         <label>Filter by Financial Cycle Segment:</label>
-        <div class="fy-container" id="fyTabWrapper">
-            </div>
-
+        <div class="fy-container" id="fyTabWrapper"></div>
         <div id="historyList" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px;"></div>
         <p style="font-size:12px; color:#64748b; font-style:italic;">* Viewing historical mode disables row adjustments to preserve data compliance integrity.</p>
     </div>
@@ -160,7 +158,7 @@
     <div class="inv-header">
         <div>
             <div class="company-title">Inficharge Power Electronics</div>
-            <div style="font-size:11px; margin-top:2px; color:#334155;">
+            <div style="font-size:11px; margin-top:2px; color:#334155; line-height: 1.4;">
                 FF-06, Kishan Galaxy, Near Broadway Hub, Bhayli Road, Vadodara, Gujarat, 391410<br>
                 Mobile: +91 7984337254 | Email: Inficharge.power@gmail.com<br>
                 <strong>GSTIN: 24BBDPB1858G1Z2</strong>
@@ -173,7 +171,7 @@
         <tr>
             <td>
                 <strong>To:</strong><br>
-                <span id="lblClientName" style="font-weight:bold;">-</span><br>
+                <span id="lblClientName" style="font-weight:bold; font-size: 13px;">-</span><br>
                 Address: <span id="lblClientAddr">-</span><br>
                 Phone: <span id="lblClientPhone">-</span><br>
                 <strong>GSTIN: <span id="lblClientGst">-</span></strong>
@@ -191,10 +189,10 @@
         <thead>
             <tr>
                 <th style="width: 50%;">Description of Jobwork / Details</th>
-                <th style="width: 12%;">HSN Code</th>
+                <th style="width: 15%;">HSN Code</th>
                 <th style="width: 10%;" class="text-right">Qty</th>
-                <th style="width: 13%;" class="text-right">Unit Price</th>
-                <th style="width: 15%;" class="text-right">Total (INR)</th>
+                <th style="width: 12%;" class="text-right">Unit Price</th>
+                <th style="width: 13%;" class="text-right">Total (INR)</th>
             </tr>
         </thead>
         <tbody id="printItemRows"></tbody>
@@ -211,12 +209,13 @@
         </div>
         <div class="summary-box">
             <div class="summary-row"><span>Subtotal:</span><span id="valSub">0.00</span></div>
-            <div class="summary-row"><span id="lblCgst">CGST:</span><span id="valCgst">0.00</span></div>
-            <div class="summary-row"><span id="lblSgst">SGST:</span><span id="valSgst">0.00</span></div>
+            <div class="summary-row" id="rowCgst"><span id="lblCgst">CGST @ 9%:</span><span id="valCgst">0.00</span></div>
+            <div class="summary-row" id="rowSgst"><span id="lblSgst">SGST @ 9%:</span><span id="valSgst">0.00</span></div>
+            <div class="summary-row" id="rowIgst" style="display:none;"><span id="lblIgst">IGST @ 18%:</span><span id="valIgst">0.00</span></div>
             <div class="grand-total">
                 <div class="summary-row"><span>Invoice Total:</span><span id="valTotal">0.00</span></div>
             </div>
-            <div class="summary-row" style="color: #b91c1c; font-weight: 600; margin-top:5px;">
+            <div class="summary-row" style="color: #b91c1c; font-weight: 600; margin-top:5px;" id="rowTdsContainer">
                 <span>Less: TDS u/s 194C:</span><span id="valTds">0.00</span>
             </div>
             <div class="summary-row" style="font-weight:bold; border-top:1px dashed #000; padding-top:4px; font-size:13px;">
@@ -230,15 +229,17 @@
     </div>
 
     <div class="sign-block">
-        For Inficharge Power Electronics<br><br><br><br>
-        (Authorized Signatory)
+        <div style="display: inline-block; text-align: center; width: 230px;">
+            <span>For Inficharge Power Electronics</span>
+            <div style="margin-top: 45px; border-top: 1px dashed #000; padding-top: 4px; font-size: 11px; font-weight: normal; color: #475569;">(Authorized Signatory)</div>
+        </div>
     </div>
 </div>
 
 <script>
 // --- CORE ERP DATABASE ENDPOINT VARIABLES ---
 const MASTER_SHEET_ID = "1CGpO35mnhNtv4QjeVojEf-3s78gYllV-dZb6HnHSnS4";
-const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpMxajHfz35cxrW-CEGRQxbdgXnFOi8TFZ-plGXy-FD3xo_EOSLYKwxbi1A_L6RVkdog/exec";
+const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwlLqnV71Y2JfsZs6tozWPy8VQMQ5GKJSXEESRPWRkE4ynJfdSQIFgx5XlRR17yd4aNDg/exec";
 
 const CLIENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=0&tqx=responseHandler:handleClientsResponse`;
 const COMPONENTS_API_URL = `https://docs.google.com/spreadsheets/d/${MASTER_SHEET_ID}/gviz/tq?gid=657996699&tqx=responseHandler:handleComponentsResponse`;
@@ -249,8 +250,8 @@ let historicalLedger = [];
 let viewOnlyMode = false;
 let savedState = null;
 let currentSelectedFY = ""; 
+let isInterStateSale = false;
 
-// Lock gate configuration profile settings (Modify password keys here)
 const CRYPTO_GATE_KEY = "ICPE@2026";
 
 function verifyGateSecurity() {
@@ -265,7 +266,6 @@ function verifyGateSecurity() {
     }
 }
 
-// Bind Enter Key execution tracking to password screen input box fields
 document.getElementById('gateKey').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') verifyGateSecurity();
 });
@@ -306,7 +306,7 @@ function parseGoogleJson(table, type) {
 function fetchHistoricalLedger() {
     if (APPS_SCRIPT_WEB_APP_URL.startsWith("http")) {
         const scriptLedger = document.createElement('script');
-        scriptLedger.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleLedgerJsonpResponse`;
+        scriptLedger.src = `${APPS_SCRIPT_WEB_APP_URL}?callback=handleLedgerJsonpResponse&nocache=` + new Date().getTime();
         document.body.appendChild(scriptLedger);
     }
 }
@@ -319,16 +319,11 @@ window.handleLedgerJsonpResponse = function(data) {
     }
 };
 
-// Calculate Indian Financial Year context out of standard text configurations
 function getIndianFinancialYear(dateStr) {
     if(!dateStr) return "";
     let parts = dateStr.split('T')[0].split(/[-/]/);
     let y = parseInt(parts[0]), m = parseInt(parts[1]);
-    
-    // If layout incoming is DD/MM/YYYY, correct parts extraction indexing mapping bounds
     if (parts[2] && parts[2].length === 4) { y = parseInt(parts[2]); m = parseInt(parts[1]); }
-    
-    // FY runs April to March. If month is Jan, Feb, Mar (1,2,3), year falls to previous cycle boundary group
     if (m >= 1 && m <= 3) {
         return `FY ${(y - 1).toString().slice(-2)}-${y.toString().slice(-2)}`;
     } else {
@@ -338,18 +333,14 @@ function getIndianFinancialYear(dateStr) {
 
 function generateSequentialInvoiceNumber() {
     if(historicalLedger.length === 0 || viewOnlyMode) return;
-    
     const activeSelectedDate = document.getElementById('uiDate').value;
     const currentInvoiceFY = getIndianFinancialYear(activeSelectedDate);
-    
     let maxNum = 0;
     historicalLedger.forEach(row => {
         let invField = row.invoiceno || row.InvoiceNo;
         let rowDateStr = row.date || row.Date;
-        
         if(invField && rowDateStr) {
             let rowFY = getIndianFinancialYear(rowDateStr.toString());
-            // Sequence matching check: Only isolate entries inside the matching financial year bounds
             if (rowFY === currentInvoiceFY) {
                 let matches = invField.toString().match(/\d+/);
                 if(matches) {
@@ -359,7 +350,6 @@ function generateSequentialInvoiceNumber() {
             }
         }
     });
-    
     let nextNumString = (maxNum + 1).toString().padStart(3, '0');
     document.getElementById('uiInvNo').value = `ICPE/${nextNumString}`;
     render();
@@ -384,11 +374,15 @@ function mapClient() {
         document.getElementById('lblClientAddr').innerText = client.Address || '-';
         document.getElementById('lblClientPhone').innerText = client.Phone || '-';
         document.getElementById('lblClientGst').innerText = client.GSTIN || '-';
+        
+        let gstinStr = (client.GSTIN || "").trim();
+        isInterStateSale = (gstinStr.length >= 2 && !gstinStr.startsWith("24"));
     }
     render();
 }
 
 function addNewRow() {
+    if(viewOnlyMode) return;
     const tbody = document.getElementById('itemRows');
     const rId = Date.now();
     const tr = document.createElement('tr');
@@ -396,12 +390,12 @@ function addNewRow() {
     
     let opts = componentsDB.map(i => `<option value="${i.id}">${i.Description}</option>`).join('');
     tr.innerHTML = `
-        <td><select class="row-item" onchange="mapRowItem('${rId}')">${opts}</select></td>
-        <td><input type="number" class="row-qty" value="1" oninput="render()"></td>
-        <td><input type="number" step="0.01" class="row-price" value="0.00" oninput="render()"></td>
-        <td><input type="number" class="row-gst" value="18" oninput="render()"></td>
-        <td><input type="number" step="0.1" class="row-tds" value="2.0" oninput="render()"></td>
-        <td><button class="btn btn-danger" onclick="deleteRow('${rId}')">✕</button></td>
+        <td><select class="row-item" style="width:100%;" onchange="mapRowItem('${rId}')">${opts}</select></td>
+        <td><input type="number" class="row-qty" value="1" style="width:100%;" oninput="render()"></td>
+        <td><input type="number" step="0.01" class="row-price" value="0.00" style="width:100%;" oninput="render()"></td>
+        <td><select class="row-gst" style="width:100%;" onchange="render()"><option value="18" selected>18%</option><option value="12">12%</option><option value="5">5%</option><option value="0">0%</option></select></td>
+        <td><input type="text" class="row-tds" value="2.0" style="width:100%;" oninput="render()"></td>
+        <td><button class="btn btn-danger" style="padding: 6px 10px;" onclick="deleteRow('${rId}')">✕</button></td>
     `;
     tbody.appendChild(tr);
     mapRowItem(rId);
@@ -444,13 +438,24 @@ function render() {
     document.getElementById('lblJobCard').innerText = jobCard === "" ? "No JC" : jobCard;
     document.getElementById('lblDate').innerText = formatToDDMMYYYY(date);
 
+    if (isInterStateSale) {
+        document.getElementById('rowCgst').style.display = "none";
+        document.getElementById('rowSgst').style.display = "none";
+        document.getElementById('rowIgst').style.display = "";
+    } else {
+        document.getElementById('rowCgst').style.display = "";
+        document.getElementById('rowSgst').style.display = "";
+        document.getElementById('rowIgst').style.display = "none";
+    }
+
     const rows = document.querySelectorAll('#itemRows tr');
     const printTbody = document.getElementById('printItemRows');
     printTbody.innerHTML = "";
 
-    let subtotal = 0, cgst = 0, sgst = 0, tds = 0;
+    let subtotal = 0, cgst = 0, sgst = 0, igst = 0, tds = 0;
+    let mainActiveTaxRate = 18;
 
-    rows.forEach(row => {
+    rows.forEach((row, index) => {
         let name = "", hsn = "998898";
         let qty = 0, price = 0, lineTotal = 0, rowGstAmount = 0, rowTdsAmount = 0;
         
@@ -466,8 +471,23 @@ function render() {
             rowGstAmount = parseFloat(row.dataset.gstamount) || 0;
             rowTdsAmount = parseFloat(row.dataset.tdsamount) || 0;
             
-            cgst += (rowGstAmount / 2);
-            sgst += (rowGstAmount / 2);
+            let savedCgstRate = parseFloat(row.dataset.cgstrate) || 0;
+            let savedSgstRate = parseFloat(row.dataset.sgstrate) || 0;
+            let savedIgstRate = parseFloat(row.dataset.igstrate) || 0;
+
+            if (index === 0) {
+                mainActiveTaxRate = isInterStateSale ? savedIgstRate : (savedCgstRate + savedSgstRate);
+                if (mainActiveTaxRate === 0) {
+                    mainActiveTaxRate = lineTotal > 0 ? Math.round((rowGstAmount / lineTotal) * 100) : 18;
+                }
+            }
+            
+            if (isInterStateSale) {
+                igst += rowGstAmount;
+            } else {
+                cgst += (rowGstAmount / 2);
+                sgst += (rowGstAmount / 2);
+            }
             tds += rowTdsAmount;
         } else {
             const comp = componentsDB.find(c => c.id === row.querySelector('.row-item').value);
@@ -476,16 +496,22 @@ function render() {
             qty = parseFloat(row.querySelector('.row-qty').value) || 0;
             price = parseFloat(row.querySelector('.row-price').value) || 0;
             
-            let gstRate = parseFloat(row.querySelector('.row-gst').value) || 18;
+            let gstInputStr = row.querySelector('.row-gst').value.trim();
+			let gstRate = (gstInputStr === "") ? 18 : parseFloat(gstInputStr);
+            if (index === 0) mainActiveTaxRate = gstRate;
             
-            // FIX: Safely evaluate if input is blank (default to 2%) vs explicitly typed zero
             let tdsInputStr = row.querySelector('.row-tds').value.trim();
             let tdsRate = (tdsInputStr === "") ? 2 : (parseFloat(tdsInputStr) || 0);
 
             lineTotal = qty * price;
             subtotal += lineTotal;
-            cgst += lineTotal * ((gstRate / 2) / 100);
-            sgst += lineTotal * ((gstRate / 2) / 100);
+
+            if (isInterStateSale) {
+                igst += lineTotal * (gstRate / 100);
+            } else {
+                cgst += lineTotal * ((gstRate / 2) / 100);
+                sgst += lineTotal * ((gstRate / 2) / 100);
+            }
             tds += lineTotal * (tdsRate / 100);
         }
 
@@ -494,29 +520,32 @@ function render() {
         printTbody.appendChild(tr);
     });
 
-    let grandTotal = subtotal + cgst + sgst;
+    if (isInterStateSale) {
+        document.getElementById('lblIgst').innerText = `IGST @ ${mainActiveTaxRate.toFixed(0)}%:`;
+    } else {
+        document.getElementById('lblCgst').innerText = `CGST @ ${(mainActiveTaxRate / 2).toFixed(0)}%:`;
+        document.getElementById('lblSgst').innerText = `SGST @ ${(mainActiveTaxRate / 2).toFixed(0)}%:`;
+    }
+
+    let grandTotal = subtotal + cgst + sgst + igst;
     let netPayable = Math.round(grandTotal - tds);
 
-// --- Replace the final section of your render() function with this ---
     document.getElementById('valSub').innerText = subtotal.toFixed(2);
     document.getElementById('valCgst').innerText = cgst.toFixed(2);
     document.getElementById('valSgst').innerText = sgst.toFixed(2);
+    document.getElementById('valIgst').innerText = igst.toFixed(2);
     document.getElementById('valTotal').innerText = grandTotal.toFixed(2);
     document.getElementById('valPayable').innerText = netPayable.toFixed(2);
     document.getElementById('valWords').innerText = numToWords(netPayable) + " Only";
 
-    // Correctly target 'valTds' and handle row visibility safely
-    const tdsDisplayElement = document.getElementById('valTds');
-    if (tdsDisplayElement) {
-        // Find either a table row parent or fall back to the direct row wrapper container
-        const tdsRow = tdsDisplayElement.closest('tr') || tdsDisplayElement.parentElement;
-        
+    const rowTdsContainer = document.getElementById('rowTdsContainer');
+    if (rowTdsContainer) {
         if (tds > 0) {
-            tdsRow.style.display = ""; // Restores original layout block style dynamically
-            tdsDisplayElement.innerText = `-${tds.toFixed(2)}`;
+            rowTdsContainer.style.display = ""; 
+            document.getElementById('valTds').innerText = `-${tds.toFixed(2)}`;
         } else {
-            tdsRow.style.display = "none"; // Hides the row completely when TDS is 0%
-            tdsDisplayElement.innerText = "0.00";
+            rowTdsContainer.style.display = "none"; 
+            document.getElementById('valTds').innerText = "0.00";
         }
     }
 }
@@ -528,12 +557,20 @@ function commitToCloudLedger() {
     const date = document.getElementById('uiDate').value;
     const jobCard = document.getElementById('uiJobCard').value.trim();
     const clientName = document.getElementById('lblClientName').innerText;
+    const clientGstin = document.getElementById('lblClientGst').innerText;
 
+    // Duplication evaluation across current operational cycle segment
+    const currentInvoiceFY = getIndianFinancialYear(date);
     const duplicate = historicalLedger.some(row => {
         let f = row.invoiceno || row.InvoiceNo;
-        return f && f.toString().toLowerCase() === invNo.toLowerCase();
+        let rowDateStr = row.date || row.Date;
+        if (f && rowDateStr) {
+            return f.toString().toLowerCase() === invNo.toLowerCase() && 
+                   getIndianFinancialYear(rowDateStr.toString()) === currentInvoiceFY;
+        }
+        return false;
     });
-    if(duplicate) { alert(`Data Entry Error: Invoice Reference ${invNo} already logged inside Drive database Ledger!`); return; }
+    if(duplicate) { alert(`Data Entry Error: Invoice Reference ${invNo} already logged inside ${currentInvoiceFY} Ledger!`); return; }
 
     let itemsPayload = [];
     document.querySelectorAll('#itemRows tr').forEach(row => {
@@ -541,20 +578,31 @@ function commitToCloudLedger() {
         const qty = parseFloat(row.querySelector('.row-qty').value) || 0;
         const price = parseFloat(row.querySelector('.row-price').value) || 0;
         
-        // Push raw field rates straight to Apps Script processing matrix
-        const lineGst = parseFloat(row.querySelector('.row-gst').value) || 18;
-        const lineTds = parseFloat(row.querySelector('.row-tds').value) || 2;
+        const gstInputStr = row.querySelector('.row-gst').value.trim();
+        const gstRate = (gstInputStr === "") ? 18 : parseFloat(gstInputStr);
         
+        const tdsInputStr = row.querySelector('.row-tds').value.trim();
+        const tdsRate = (tdsInputStr === "") ? 2 : (parseFloat(tdsInputStr) || 0);
+
+        // Core transmission properties matching what the macro loop expects
         itemsPayload.push({
             desc: comp ? comp.Description : 'SMT/SMD Jobwork',
             qty: qty,
             price: price,
-            gst: lineGst,
-            tds: lineTds
+            gst: gstRate,
+            tds: tdsRate
         });
     });
 
-    const payload = { invoiceNo: invNo, date: date, clientName: clientName, jobCard: jobCard, items: itemsPayload };
+    // Pass structural keys cleanly down the fetch stream matrix
+    const payload = { 
+        invoiceNo: invNo, 
+        date: date, 
+        clientName: clientName, 
+        clientGstin: clientGstin, // Added to pass GSTIN to the Apps Script calculation engine
+        jobCard: jobCard, 
+        items: itemsPayload 
+    };
 
     fetch(APPS_SCRIPT_WEB_APP_URL, {
         method: 'POST',
@@ -562,7 +610,7 @@ function commitToCloudLedger() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     }).then(() => {
-        alert("Transaction posted successfully!");
+        alert(`Transaction packet data for ${invNo} successfully transmitted to ledger sheets.`);
         location.reload();
     }).catch(e => alert("Network transmission fault recorded: " + e));
 }
@@ -576,13 +624,11 @@ function buildFinancialYearTabs() {
             if(fy) fySet.add(fy);
         }
     });
-
-    // Auto-include current active loop cycle year if ledger dataset database returns blank rows
     let currentFY = getIndianFinancialYear(new Date().toISOString());
     fySet.add(currentFY);
 
     let fyArray = Array.from(fySet).sort().reverse();
-    currentSelectedFY = fyArray[0]; // Default selection maps current operational target cycle
+    currentSelectedFY = fyArray[0];
 
     const wrapper = document.getElementById('fyTabWrapper');
     wrapper.innerHTML = "";
@@ -612,7 +658,6 @@ function populateHistoryViewer() {
         let iJc = row.jobcard || row.JobCard || '';
         if(!iNo || !iDt) return;
         
-        // Segment row items by financial sorting context
         let rowFY = getIndianFinancialYear(iDt.toString());
         if (rowFY !== currentSelectedFY) return;
 
@@ -648,7 +693,6 @@ function populateHistoryViewer() {
 
 function viewClosedInvoice(invNo) {
     viewOnlyMode = true;
-    
     let uniqueInvoices = {};
     historicalLedger.forEach(row => {
         let iNo = row.invoiceno || row.InvoiceNo;
@@ -657,41 +701,21 @@ function viewClosedInvoice(invNo) {
         let iJc = row.jobcard || row.JobCard || '';
         
         if (iNo && iDt) {
-            // Fix: Create a unique compound key using Invoice Number + Financial Year
             let rowFY = getIndianFinancialYear(iDt.toString());
             let uniqueComboKey = `${iNo}_${rowFY}`;
             
             if (!uniqueInvoices[uniqueComboKey]) {
-                uniqueInvoices[uniqueComboKey] = { 
-                    invoiceNo: iNo, 
-                    date: iDt, 
-                    clientName: iCl, 
-                    jobCard: iJc, 
-                    fy: rowFY,
-                    rows: [] 
-                };
+                uniqueInvoices[uniqueComboKey] = { invoiceNo: iNo, date: iDt, clientName: iCl, jobCard: iJc, fy: rowFY, rows: [] };
             }
             uniqueInvoices[uniqueComboKey].rows.push(row);
         }
     });
 
-    // Match the selected invoice number, but explicitly filter it to the active Financial Year tab
     let activeKey = `${invNo}_${currentSelectedFY}`;
-    let selectedInv = uniqueInvoices[activeKey];
-    
-    // Fallback security check if year mismatch happens
-    if (!selectedInv) {
-        // Try searching for any match if exact active year tracking fails
-        selectedInv = Object.values(uniqueInvoices).find(inv => inv.invoiceNo === invNo);
-    }
-    
+    let selectedInv = uniqueInvoices[activeKey] || Object.values(uniqueInvoices).find(inv => inv.invoiceNo === invNo);
     if (!selectedInv) return;
 
-    savedState = {
-        invoiceNo: selectedInv.invoiceNo,
-        date: selectedInv.date,
-        jobCard: selectedInv.jobCard
-    };
+    savedState = { invoiceNo: selectedInv.invoiceNo, date: selectedInv.date, jobCard: selectedInv.jobCard };
 
     switchTab('CREATE');
     document.getElementById('btnExitView').style.display = "block";
@@ -701,19 +725,14 @@ function viewClosedInvoice(invNo) {
     document.getElementById('btnAddLine').style.display = "none";
     document.getElementById('lblClientName').innerText = selectedInv.clientName;
     
-    const clientProfile = clientsDB.find(c => {
-        let nameInDB = c.CompanyName || c.Company || c.name || c.B || '';
-        return nameInDB.trim().toLowerCase() === selectedInv.clientName.trim().toLowerCase();
-    });
-
+    const clientProfile = clientsDB.find(c => (c.CompanyName || '').trim().toLowerCase() === selectedInv.clientName.trim().toLowerCase());
     if (clientProfile) {
         document.getElementById('lblClientAddr').innerText = clientProfile.Address || '-';
         document.getElementById('lblClientPhone').innerText = clientProfile.Phone || '-';
         document.getElementById('lblClientGst').innerText = clientProfile.GSTIN || '-';
-    } else {
-        document.getElementById('lblClientAddr').innerText = '-';
-        document.getElementById('lblClientPhone').innerText = '-';
-        document.getElementById('lblClientGst').innerText = '-';
+        
+        let gstinStr = (clientProfile.GSTIN || "").trim();
+        isInterStateSale = (gstinStr.length >= 2 && !gstinStr.startsWith("24"));
     }
     
     const tbody = document.getElementById('itemRows');
@@ -730,6 +749,9 @@ function viewClosedInvoice(invNo) {
         tr.dataset.hsn = "998898";
         tr.dataset.gstamount = rGstAmount;
         tr.dataset.tdsamount = rTdsAmount;
+        tr.dataset.cgstrate = row.cgstrate || row.CgstRate || 0;
+        tr.dataset.sgstrate = row.sgstrate || row.SgstRate || 0;
+        tr.dataset.igstrate = row.igstrate || row.IgstRate || 0;
         
         tr.innerHTML = `
             <td><strong>${rDesc}</strong></td>
@@ -817,33 +839,18 @@ function formatToDDMMYYYY(dateString) {
     }
     return dateString;
 }
+
 function manualDatabaseRefresh() {
-    // 1. Reset the structural race condition gate flags
-    clientsLoaded = false;
-    componentsLoaded = false;
-    
-    // 2. Clear out on-screen layout arrays to prevent append stacking
     document.getElementById('uiClient').innerHTML = "<option>Refreshing data streams...</option>";
     document.getElementById('itemRows').innerHTML = "";
-    
-    // 3. Re-inject script elements to bypass browser memory caching
     loadExternalData();
 }
+
 function exportDesktopPDF() {
-    // 1. Grab the current invoice number and date from the layout elements
-    const invNum = document.getElementById('lblInvNo').innerText.trim().replace(/\//g, '/');
-    const invDate = document.getElementById('lblDate').innerText.trim();
-    
-    // 2. Backup the original browser tab title
+    const invNum = document.getElementById('lblInvNo').innerText.trim().replace(/\//g, '_INVOICE_');
     const originalTitle = document.title;
-    
-    // 3. Temporarily set the title to your precise naming schema
     document.title = `${invNum}`;
-    
-    // 4. Trigger the native print/PDF window
     window.print();
-    
-    // 5. Restore the original tab title back immediately after the dialog closes
     document.title = originalTitle;
 }
 </script>
