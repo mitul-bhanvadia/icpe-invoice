@@ -8,12 +8,12 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "https://github.com/mitul-bhanvadia/icpe-invoice/blob/main/ICPE_LOGO.png",
+      "src": "ICPE_LOGO.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://github.com/mitul-bhanvadia/icpe-invoice/blob/main/ICPE_LOGO.png",
+      "src": "ICPE_LOGO.png",
       "sizes": "512x512",
       "type": "image/png"
     }
