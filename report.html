@@ -268,9 +268,19 @@ window.handleReportLedgerResponse = function(data) {
 
 function getIndianFinancialYear(dateStr) {
     if(!dateStr) return "";
-    let parts = dateStr.split('T')[0].split(/[-/]/);
-    let y = parseInt(parts[0]), m = parseInt(parts[1]);
-    if (parts[2] && parts[2].length === 4) { y = parseInt(parts[2]); m = parseInt(parts[1]); }
+    let targetString = dateStr.toString().trim();
+    let y, m;
+    
+    if (targetString.includes('T18:30:00') || targetString.includes('18:30:00')) {
+        let dObj = new Date(targetString);
+        y = dObj.getFullYear();
+        m = dObj.getMonth() + 1;
+    } else {
+        let parts = targetString.split('T')[0].split(/[-/]/);
+        y = parseInt(parts[0]); m = parseInt(parts[1]);
+        if (parts[2] && parts[2].length === 4) { y = parseInt(parts[2]); m = parseInt(parts[1]); }
+    }
+    
     if (m >= 1 && m <= 3) {
         return `FY ${(y - 1).toString().slice(-2)}-${y.toString().slice(-2)}`;
     } else {
@@ -528,36 +538,38 @@ function toggleClientAccordionView(idx) {
     }
 }
 
-function formatToDDMMYYYY(dStr) {
-    if(!dStr || dStr === "-" || dStr.trim() === "") return "-";
+function formatToDDMMYYYY(dateString) {
+    if (!dateString || dateString.toString().trim() === "" || dateString === "-") return "-";
+    let targetString = dateString.toString().trim();
     
-    // Convert to string and take only the date portion (YYYY-MM-DD or DD/MM/YYYY)
-    let cleanStr = dStr.toString().split('T')[0].trim();
-    
-    // Handle YYYY-MM-DD format safely without TimeZone shifts
-    if (cleanStr.includes('-')) {
-        let parts = cleanStr.split('-');
-        if (parts.length === 3) {
-            if (parts[0].length === 4) {
-                // Returns DD-MM-YYYY explicitly
-                return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
-            }
-            return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+    // 1. Intercept T18:30:00 shift from Google Sheets API UTC export
+    if (targetString.includes('T18:30:00') || targetString.includes('18:30:00')) {
+        const localDateObject = new Date(targetString);
+        if (!isNaN(localDateObject.getTime())) {
+            let day = String(localDateObject.getDate()).padStart(2, '0');
+            let month = String(localDateObject.getMonth() + 1).padStart(2, '0');
+            let year = localDateObject.getFullYear();
+            return `${day}-${month}-${year}`;
         }
     }
     
-    // Handle DD/MM/YYYY format
-    if (cleanStr.includes('/')) {
-        let parts = cleanStr.split('/');
+    // 2. Standard formatting fallback for clean strings
+    let cleanDate = targetString.split('T')[0].trim();
+    if (cleanDate.includes('/')) {
+        let parts = cleanDate.split('/');
         if (parts.length === 3) {
-            if (parts[0].length === 4) {
-                return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
-            }
+            if (parts[0].length === 4) return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
             return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
         }
     }
-    
-    return cleanStr;
+    if (cleanDate.includes('-')) {
+        let parts = cleanDate.split('-');
+        if (parts.length === 3) {
+            if (parts[0].length === 4) return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+            return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+        }
+    }
+    return dateString;
 }
 </script>
 </body>
