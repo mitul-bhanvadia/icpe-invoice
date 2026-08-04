@@ -360,7 +360,18 @@ function processAnalyticsData() {
         let rawDateStr = row.date || '';
         if (!rawDateStr) return;
         
-        let rowDateObj = new Date(rawDateStr.toString().split('T')[0]);
+        let cleanDatePart = rawDateStr.toString().split('T')[0];
+        let dateComponents = cleanDatePart.split(/[-/]/);
+        let rowDateObj;
+
+        if (dateComponents[0].length === 4) {
+            // YYYY-MM-DD -> Construct local date (Year, Month Index 0-11, Day)
+            rowDateObj = new Date(parseInt(dateComponents[0]), parseInt(dateComponents[1]) - 1, parseInt(dateComponents[2]));
+        } else {
+            // DD-MM-YYYY -> Construct local date
+            rowDateObj = new Date(parseInt(dateComponents[2]), parseInt(dateComponents[1]) - 1, parseInt(dateComponents[0]));
+        }
+
         let rowTime = rowDateObj.getTime();
         let rowFY = getIndianFinancialYear(rawDateStr.toString());
         
@@ -518,12 +529,35 @@ function toggleClientAccordionView(idx) {
 }
 
 function formatToDDMMYYYY(dStr) {
-    if(!dStr || dStr === "-") return "-";
-    let datePart = dStr.toString().split('T')[0];
-    let p = datePart.split(/[-/]/);
-    if(p.length !== 3) return dStr;
-    if(p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`;
-    return dStr;
+    if(!dStr || dStr === "-" || dStr.trim() === "") return "-";
+    
+    // Convert to string and take only the date portion (YYYY-MM-DD or DD/MM/YYYY)
+    let cleanStr = dStr.toString().split('T')[0].trim();
+    
+    // Handle YYYY-MM-DD format safely without TimeZone shifts
+    if (cleanStr.includes('-')) {
+        let parts = cleanStr.split('-');
+        if (parts.length === 3) {
+            if (parts[0].length === 4) {
+                // Returns DD-MM-YYYY explicitly
+                return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+            }
+            return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+        }
+    }
+    
+    // Handle DD/MM/YYYY format
+    if (cleanStr.includes('/')) {
+        let parts = cleanStr.split('/');
+        if (parts.length === 3) {
+            if (parts[0].length === 4) {
+                return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+            }
+            return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
+        }
+    }
+    
+    return cleanStr;
 }
 </script>
 </body>
